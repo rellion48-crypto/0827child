@@ -283,85 +283,87 @@ function addChatMessage(sender, text) {
 }
 
 function processChatInput(text) {
-  let reply = "";
-  const s = state.chatSlots;
-  const raw = text.trim();
+  try {
+    let reply = "";
+    const s = state.chatSlots;
+    const raw = text.trim();
+    const cleaned = cleanSuffixes(raw);
 
-  // 0. Reset Request (Scenario 9: "처음부터 다시요")
-  if (/처음부터\s*다시|전부\s*다시|초기화/.test(raw)) {
-    s.domain = "";
-    s.placeName = "";
-    s.region = "";
-    s.departure = "";
-    s.destination = "";
-    s.time = "";
-    s.type = "";
-    
-    // Check if new domain or place is included in the same utterance (e.g. "처음부터 다시요. 식당으로 할게요")
-    if (/식당|음식|밥/.test(raw)) s.domain = "식당";
-    else if (/숙소|호텔|호스텔/.test(raw)) s.domain = "숙소";
-    else if (/관광|명소/.test(raw)) s.domain = "관광";
-
-    renderChatSlots();
-    reply = `🔄 슬롯을 모두 초기화하고 처음부터 다시 시작합니다.${s.domain ? ` [선택 도메인: <strong>${s.domain}</strong>]` : ''}<br>방문하실 장소나 출발지를 말씀해 주세요.`;
-    addChatMessage("bot", reply);
-    return;
-  }
-
-  // 1. Check for Modification/Correction Requests (수정 요청)
-  const isCorrection = raw.includes("수정") || raw.includes("바꿔") || raw.includes("변경") || raw.includes("아니고");
-  
-  const destModifyMatch = raw.match(/(?:도착지|목적지|장소)(?:를|는|가|로)?\s*([가-힣a-zA-Z0-9\s]+?)(?:[으|로|을|를|에|으로]?\s*(?:수정|바꿔|변경|할래|해줘))/);
-  const depModifyMatch = raw.match(/출발지(?:를|는|가|에서)?\s*([가-힣a-zA-Z0-9\s]+?)(?:[으|로|을|를|에|으로]?\s*(?:수정|바꿔|변경|할래|해줘))/);
-  const timeModifyMatch = raw.match(/시간(?:을|는|으로)?\s*([0-9\:\s시분]+?)(?:[으|로|에]?\s*(?:수정|바꿔|변경|해줘))/);
-
-  if (destModifyMatch && destModifyMatch[1]) {
-    s.placeName = cleanSuffixes(destModifyMatch[1]);
-    s.destination = s.placeName; // Auto Carry-over on place modification (Scenario 7)
-    reply = `✓ 장소 및 택시 도착지를 '<strong>${s.destination}</strong>'(으)로 수정했습니다.`;
-  } else if (depModifyMatch && depModifyMatch[1]) {
-    s.departure = cleanSuffixes(depModifyMatch[1]);
-    reply = `✓ 출발지를 '<strong>${s.departure}</strong>'(으)로 수정했습니다.`;
-  } else if (timeModifyMatch && timeModifyMatch[1]) {
-    s.time = timeModifyMatch[1].trim();
-    reply = `✓ 출발 시간을 '<strong>${s.time}</strong>'(으)로 수정했습니다.`;
-  }
-
-  // 1.5 Domain Only or Generic Category Input (e.g. "숙소", "식당", "관광", "숙소요", "식당 찾아요")
-  const isOnlyDomain = /^(?:숙소|식당|관광|호텔|모텔|호스텔|음식점|맛집|카페|관광지|명소)(?:요|으로|로|예약|찾아줘|추천)?$/i.test(cleaned);
-  
-  if (isOnlyDomain) {
-    if (/숙소|호텔|호스텔|모텔/.test(cleaned)) s.domain = "숙소";
-    else if (/관광|관광지|명소/.test(cleaned)) s.domain = "관광";
-    else s.domain = "식당";
-
-    // Clear place name if it was mistakenly set as domain word
-    if (["숙소", "식당", "관광", "호텔", "맛집"].includes(s.placeName)) {
+    // 0. Reset Request (Scenario 9: "처음부터 다시요")
+    if (/처음부터\s*다시|전부\s*다시|초기화/.test(raw)) {
+      s.domain = "";
       s.placeName = "";
+      s.region = "";
+      s.departure = "";
       s.destination = "";
+      s.time = "";
+      s.type = "";
+      
+      // Check if new domain or place is included in the same utterance (e.g. "처음부터 다시요. 식당으로 할게요")
+      if (/식당|음식|밥/.test(raw)) s.domain = "식당";
+      else if (/숙소|호텔|호스텔/.test(raw)) s.domain = "숙소";
+      else if (/관광|명소/.test(raw)) s.domain = "관광";
+
+      renderChatSlots();
+      reply = `🔄 슬롯을 모두 초기화하고 처음부터 다시 시작합니다.${s.domain ? ` [선택 도메인: <strong>${s.domain}</strong>]` : ''}<br>방문하실 장소나 출발지를 말씀해 주세요.`;
+      addChatMessage("bot", reply);
+      return;
     }
 
-    renderChatSlots();
-    reply = `✓ [<strong>${s.domain}</strong>] 도메인이 선택되었습니다.<br>방문하실 ${s.domain} 이름이나 원하시는 지역/조건을 말씀해 주세요. (예: "심미 호스텔", "두부두부두부", "서울 서쪽")`;
-    addChatMessage("bot", reply);
-    return;
-  }
+    // 1. Check for Modification/Correction Requests (수정 요청)
+    const isCorrection = raw.includes("수정") || raw.includes("바꿔") || raw.includes("변경") || raw.includes("아니고");
+    
+    const destModifyMatch = raw.match(/(?:도착지|목적지|장소)(?:를|는|가|로)?\s*([가-힣a-zA-Z0-9\s]+?)(?:[으|로|을|를|에|으로]?\s*(?:수정|바꿔|변경|할래|해줘))/);
+    const depModifyMatch = raw.match(/출발지(?:를|는|가|에서)?\s*([가-힣a-zA-Z0-9\s]+?)(?:[으|로|을|를|에|으로]?\s*(?:수정|바꿔|변경|할래|해줘))/);
+    const timeModifyMatch = raw.match(/시간(?:을|는|으로)?\s*([0-9\:\s시분]+?)(?:[으|로|에]?\s*(?:수정|바꿔|변경|해줘))/);
 
-  // 1.6 Feature / Category Search (Scenario 1 & 3: "헬스장 있는 숙소", "치킨집 찾아요")
-  if (/헬스장|스파|조식|주차/.test(raw) && !s.placeName) {
-    s.domain = "숙소";
-    renderChatSlots();
-    reply = `숙소 조건을 확인했습니다. 추천 장소: <strong>에버뉴 호텔</strong>(스파/헬스장), <strong>심미 호스텔</strong>(조식제공), <strong>파크 호텔</strong>(주차/스파). 가실 곳의 이름을 말씀해 주세요.`;
-    addChatMessage("bot", reply);
-    return;
-  }
-  if (/치킨|일식|한식|고기|갈비|포차/.test(raw) && !s.placeName && !s.destination) {
-    s.domain = "식당";
-    renderChatSlots();
-    reply = `식당 종류를 확인했습니다. 가실 식당 이름이나 가고 싶은 지역을 말씀해 주세요. (예: "두부두부두부", "주점부리", "서울 동쪽")`;
-    addChatMessage("bot", reply);
-    return;
-  }
+    if (destModifyMatch && destModifyMatch[1]) {
+      s.placeName = cleanSuffixes(destModifyMatch[1]);
+      s.destination = s.placeName; // Auto Carry-over on place modification (Scenario 7)
+      reply = `✓ 장소 및 택시 도착지를 '<strong>${s.destination}</strong>'(으)로 수정했습니다.`;
+    } else if (depModifyMatch && depModifyMatch[1]) {
+      s.departure = cleanSuffixes(depModifyMatch[1]);
+      reply = `✓ 출발지를 '<strong>${s.departure}</strong>'(으)로 수정했습니다.`;
+    } else if (timeModifyMatch && timeModifyMatch[1]) {
+      s.time = timeModifyMatch[1].trim();
+      reply = `✓ 출발 시간을 '<strong>${s.time}</strong>'(으)로 수정했습니다.`;
+    }
+
+    // 1.5 Domain Only or Generic Category Input (e.g. "숙소", "식당", "관광", "숙소요", "식당 찾아요")
+    const isOnlyDomain = /^(?:숙소|식당|관광|호텔|모텔|호스텔|음식점|맛집|카페|관광지|명소)(?:요|으로|로|예약|찾아줘|추천)?$/i.test(cleaned);
+    
+    if (isOnlyDomain) {
+      if (/숙소|호텔|호스텔|모텔/.test(cleaned)) s.domain = "숙소";
+      else if (/관광|관광지|명소/.test(cleaned)) s.domain = "관광";
+      else s.domain = "식당";
+
+      // Clear place name if it was mistakenly set as domain word
+      if (["숙소", "식당", "관광", "호텔", "맛집"].includes(s.placeName)) {
+        s.placeName = "";
+        s.destination = "";
+      }
+
+      renderChatSlots();
+      reply = `✓ [<strong>${s.domain}</strong>] 도메인이 선택되었습니다.<br>방문하실 ${s.domain} 이름이나 원하시는 지역/조건을 말씀해 주세요. (예: "심미 호스텔", "두부두부두부", "서울 서쪽")`;
+      addChatMessage("bot", reply);
+      return;
+    }
+
+    // 1.6 Feature / Category Search (Scenario 1 & 3: "헬스장 있는 숙소", "치킨집 찾아요")
+    if (/헬스장|스파|조식|주차/.test(raw) && !s.placeName) {
+      s.domain = "숙소";
+      renderChatSlots();
+      reply = `숙소 조건을 확인했습니다. 추천 장소: <strong>에버뉴 호텔</strong>(스파/헬스장), <strong>심미 호스텔</strong>(조식제공), <strong>파크 호텔</strong>(주차/스파). 가실 곳의 이름을 말씀해 주세요.`;
+      addChatMessage("bot", reply);
+      return;
+    }
+    if (/치킨|일식|한식|고기|갈비|포차/.test(raw) && !s.placeName && !s.destination) {
+      s.domain = "식당";
+      renderChatSlots();
+      reply = `식당 종류를 확인했습니다. 가실 식당 이름이나 가고 싶은 지역을 말씀해 주세요. (예: "두부두부두부", "주점부리", "서울 동쪽")`;
+      addChatMessage("bot", reply);
+      return;
+    }
 
   // 2. Extract Domain if mentioned in sentence
   if (/식당|음식|밥|뷔페|갈비|고기|한식|일식|중식|양식|치킨|카페|베이커리|맛집/.test(raw)) {
@@ -445,6 +447,10 @@ function processChatInput(text) {
   }
 
   addChatMessage("bot", reply);
+  } catch (err) {
+    console.error("Chatbot processing error:", err);
+    addChatMessage("bot", "메시지를 처리하는 중 일시적인 오류가 발생했습니다. 다시 말씀해 주세요.");
+  }
 }
 
 function renderChatSlots() {
