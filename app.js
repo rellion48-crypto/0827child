@@ -240,8 +240,46 @@ function updateChecklistBadges() {
 }
 
 // ==========================================================================
-// 8. Chatbot Domain: Flexible Natural Language Dialogue & Slot Engine
+// 8. Chatbot Domain: Gemini LLM Engine + Sequential Dialogue System
 // ==========================================================================
+
+const GEMINI_CONFIG = {
+  apiKey: (typeof window !== "undefined" && (window.GEMINI_API_KEY || localStorage.getItem("GEMINI_API_KEY"))) || "",
+  model: "gemini-3.5-flash-lite",
+  endpoint: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent"
+};
+
+const SYSTEM_PROMPT = `당신은 한국의 [장소 접수 -> 택시 배차] 전문 대화형 AI 어시스턴트입니다.
+사용자와 자연스럽게 대화하며 다음 슬롯들을 채우고, 배차 완료까지 필요한 질문을 순차적으로 자연스럽게 물어봅니다.
+
+슬롯 목록:
+- domain: "식당", "숙소", "관광" 중 하나
+- placeName: 사용자가 방문하려는 구체적 장소 이름 (예: "룰루 한식뷔페", "두부두부두부", "무궁화 모텔", "창덕궁", "심미 호스텔")
+- departure: 택시 출발지 (예: "호텔 파크", "숭실대입구역", "서울역", "집", "강남역")
+- destination: 택시 도착지 (장소명이 입력되면 자동으로 동일하게 이월됨. 사용자가 별도 도착지를 말하면 수정 가능)
+- time: 탑승/출발 시간 (예: "14:30", "15:00", "지금 바로")
+- type: 택시 종류 (예: "일반 택시", "모범 택시", "고급 택시", "무관")
+
+핵심 동작 규칙:
+1. [장소명/도착지 이월]: 사용자가 구체적 장소명(예: "룰루 한식뷔페", "두부두부두부", "무궁화 모텔", "창덕궁", "남산타워")을 말하면 domain을 판단하고, placeName과 택시 destination 슬롯에 동일하게 즉시 채워 넣습니다.
+2. [카테고리/도메인만 말한 경우]: 사용자가 "식당", "숙소", "관광", "호텔 찾아요"처럼 카테고리만 말했을 때는 domain만 채우고 placeName은 비워둡니다. 그리고 구체적인 장소명을 질문합니다.
+3. [슬롯 수정]: 사용자가 "도착지를 서울역으로 바꿔줘", "출발지는 숭실대입구역이야", "시간 16시로 변경"처럼 수정을 요청하면 해당 슬롯을 즉시 갱신합니다.
+4. [초기화]: "처음부터 다시", "초기화" 요청 시 모든 슬롯을 빈 문자열("")로 리셋합니다.
+5. [배차 완료]: destination, departure, time 3가지가 모두 채워지면 예약번호(TX-XXXXX), 기사님 번호(010-8376-XXXX)와 함께 배차 완료 메시지를 작성합니다.
+6. [순차적 유도 질문 (reply)]: 부족한 슬롯이 무엇인지 파악하여 다음에 사용자가 무엇을 입력해야 하는지 명확하고 친절한 예시와 함께 질문합니다. (예: 장소 접수 후 ➔ "어디서 몇 시에 출발하시나요? 출발지와 출발 시간을 알려주세요. (예: '서울역에서 15시')")
+
+반드시 마크다운 코드블록 없이 아래 순수 JSON 형식으로만 답하세요:
+{
+  "slots": {
+    "domain": "...",
+    "placeName": "...",
+    "departure": "...",
+    "destination": "...",
+    "time": "...",
+    "type": "..."
+  },
+  "reply": "사용자에게 보낼 친절한 답변 (HTML <strong> 태그 사용 가능)"
+}`;
 
 function cleanSuffixes(str) {
   if (!str) return "";
@@ -261,7 +299,7 @@ function handleChatSubmit() {
 
   setTimeout(() => {
     processChatInput(text);
-  }, 250);
+  }, 100);
 }
 
 function sendQuickChat(text) {
@@ -278,11 +316,53 @@ function addChatMessage(sender, text) {
   log.scrollTop = log.scrollHeight;
 }
 
-function processChatInput(text) {
+async function processChatInput(text) {
+  const raw = text.trim();
+  if (!raw) return;
+
+  // 1. Try Real Gemini LLM Engine
+  try {
+    const prompt = `${SYSTEM_PROMPT}\n\n[현재 슬롯 상태]: ${JSON.stringify(state.chatSlots)}\n[사용자 발화]: "${raw}"`;
+    const response = await fetch(`${GEMINI_CONFIG.endpoint}?key=${GEMINI_CONFIG.apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const cleaned = rawText.replace(/```json/gi, "").replace(/```/g, "").trim();
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      if (match) {
+        const parsed = JSON.parse(match[0]);
+        if (parsed && parsed.slots) {
+          // Update slots with LLM extracted data
+          for (const [k, v] of Object.entries(parsed.slots)) {
+            if (v !== undefined) state.chatSlots[k] = v;
+          }
+          renderChatSlots();
+          if (parsed.reply) {
+            addChatMessage("bot", parsed.reply);
+            return;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Gemini API call failed, falling back to local sequential engine:", err);
+  }
+
+  // 2. Bulletproof Local Sequential Engine Fallback
+  runLocalSequentialEngine(raw);
+}
+
+function runLocalSequentialEngine(raw) {
   try {
     let reply = "";
     const s = state.chatSlots;
-    const raw = text.trim();
     const cleaned = cleanSuffixes(raw);
 
     // 0. Reset Request (Scenario 9: "처음부터 다시요")
@@ -294,7 +374,6 @@ function processChatInput(text) {
       s.time = "";
       s.type = "";
       
-      // Check if new domain or place is included in the same utterance (e.g. "처음부터 다시요. 식당으로 할게요")
       if (/식당|음식|밥/.test(raw)) s.domain = "식당";
       else if (/숙소|호텔|호스텔/.test(raw)) s.domain = "숙소";
       else if (/관광|명소/.test(raw)) s.domain = "관광";
@@ -305,14 +384,14 @@ function processChatInput(text) {
       return;
     }
 
-    // 1. Check for Modification/Correction Requests (수정 요청)
+    // 1. Check for Explicit Modification/Correction Requests (수정 요청)
     const destModifyMatch = raw.match(/(?:도착지|목적지|장소)(?:를|는|가|로)?\s*([가-힣a-zA-Z0-9\s]+?)(?:[으|로|을|를|에|으로]?\s*(?:수정|바꿔|변경|할래|해줘))/);
     const depModifyMatch = raw.match(/출발지(?:를|는|가|에서)?\s*([가-힣a-zA-Z0-9\s]+?)(?:[으|로|을|를|에|으로]?\s*(?:수정|바꿔|변경|할래|해줘))/);
     const timeModifyMatch = raw.match(/시간(?:을|는|으로)?\s*([0-9\:\s시분]+?)(?:[으|로|에]?\s*(?:수정|바꿔|변경|해줘))/);
 
     if (destModifyMatch && destModifyMatch[1]) {
       s.placeName = cleanSuffixes(destModifyMatch[1]);
-      s.destination = s.placeName; // Auto Carry-over on place modification (Scenario 7)
+      s.destination = s.placeName; // Auto Carry-over
       reply = `✓ 장소 및 택시 도착지를 '<strong>${s.destination}</strong>'(으)로 수정했습니다.`;
     } else if (depModifyMatch && depModifyMatch[1]) {
       s.departure = cleanSuffixes(depModifyMatch[1]);
@@ -322,52 +401,40 @@ function processChatInput(text) {
       reply = `✓ 출발 시간을 '<strong>${s.time}</strong>'(으)로 수정했습니다.`;
     }
 
-    // 1.5 Domain Only or Generic Category Input (e.g. "숙소", "식당", "관광", "숙소요", "식당 찾아요")
+    // 2. Explicit Domain Only Selection (e.g. "숙소", "식당", "관광", "숙소요")
     const isOnlyDomain = /^(?:숙소|식당|관광|호텔|모텔|호스텔|음식점|맛집|카페|관광지|명소)(?:요|으로|로|예약|찾아줘|추천)?$/i.test(cleaned);
-    
     if (isOnlyDomain) {
       if (/숙소|호텔|호스텔|모텔/.test(cleaned)) s.domain = "숙소";
       else if (/관광|관광지|명소/.test(cleaned)) s.domain = "관광";
       else s.domain = "식당";
 
-      // Clear place name if it was mistakenly set as domain word
       if (["숙소", "식당", "관광", "호텔", "맛집"].includes(s.placeName)) {
         s.placeName = "";
         s.destination = "";
       }
 
       renderChatSlots();
-      reply = `✓ [<strong>${s.domain}</strong>] 도메인이 선택되었습니다.<br>방문하실 ${s.domain} 이름을 말씀해 주세요. (예: "심미 호스텔", "두부두부두부", "무궁화 모텔")`;
+      reply = `✓ [<strong>${s.domain}</strong>] 도메인이 선택되었습니다.<br>방문하실 ${s.domain} 이름을 말씀해 주세요. (예: "심미 호스텔", "두부두부두부", "룰루 한식뷔페")`;
       addChatMessage("bot", reply);
       return;
     }
 
-    // 1.6 Feature / Category Search (Scenario 1 & 3: "헬스장 있는 숙소", "치킨집 찾아요")
-    if (/헬스장|스파|조식|주차/.test(raw) && !s.placeName) {
-      s.domain = "숙소";
-      renderChatSlots();
-      reply = `숙소 조건을 확인했습니다. 추천 장소: <strong>에버뉴 호텔</strong>(스파/헬스장), <strong>심미 호스텔</strong>(조식제공), <strong>파크 호텔</strong>(주차/스파). 가실 곳의 이름을 말씀해 주세요.`;
-      addChatMessage("bot", reply);
-      return;
-    }
-    if (/치킨|일식|한식|고기|갈비|포차/.test(raw) && !s.placeName && !s.destination) {
-      s.domain = "식당";
-      renderChatSlots();
-      reply = `식당 종류를 확인했습니다. 가실 식당 이름을 말씀해 주세요. (예: "두부두부두부", "주점부리", "한식뷔페")`;
-      addChatMessage("bot", reply);
-      return;
-    }
-
-    // 2. Extract Domain if mentioned in sentence
-    if (/식당|음식|밥|뷔페|갈비|고기|한식|일식|중식|양식|치킨|카페|베이커리|맛집/.test(raw)) {
-      s.domain = "식당";
-    } else if (/호텔|숙소|호스텔|모텔|게스트|에어비|펜션|리조트/.test(raw)) {
-      s.domain = "숙소";
-    } else if (/관광|명소|공원|타워|박물관|미술관|성원|거리|궁|유원지|청와대|경복궁|창덕궁/.test(raw)) {
-      s.domain = "관광";
+    // 3. Extract Place Name when explicitly phrased (e.g. "룰루 한식뷔페가 식당 이름이야", "장소는 두부두부두부")
+    const explicitPlaceMatch = raw.match(/([가-힣a-zA-Z0-9\s]+?)(?:가|이|는|은)?\s*(?:식당|숙소|호텔|가게|장소)?\s*(?:이름이야|이름입니다|이름|으로\s*할게|갈게요|갈래)/);
+    if (explicitPlaceMatch && explicitPlaceMatch[1] && !["출발지", "도착지", "시간", "택시"].includes(explicitPlaceMatch[1])) {
+      const pName = cleanSuffixes(explicitPlaceMatch[1]);
+      if (pName.length > 0 && !["숙소", "식당", "관광"].includes(pName)) {
+        s.placeName = pName;
+        s.destination = pName; // Auto Carry-over
+        if (!s.domain) {
+          s.domain = /뷔페|식당|밥|음식|갈비|치킨|일식|한식/.test(pName) ? "식당" :
+                     /호텔|호스텔|숙소|에어비|모텔|펜션/.test(pName) ? "숙소" : "식당";
+        }
+        reply = `✓ 장소 '<strong>${s.placeName}</strong>'(${s.domain})을(를) 접수하여 택시 <strong>도착지</strong>로 자동 이월했습니다.`;
+      }
     }
 
-    // 3. Extract Departure (Explicit: "출발지가 숭실대입구역이라고", "출발지는 서울역", "출발지: 강남역" / Particle: "숭실대입구역에서", "호텔에서")
+    // 4. Extract Departure (Explicit: "출발지가 숭실대입구역이라고", "출발지는 서울역" / Particle: "숭실대입구역에서")
     const explicitDepMatch = raw.match(/출발지(?:는|가|로|에서|:)?\s*([가-힣a-zA-Z0-9\s]+?)(?:[으|로|을|를|에|이라고|라고|입니다|이야|야]|\s*$)/);
     const particleDepMatch = raw.match(/([가-힣a-zA-Z0-9\s]+?)(?:에서|서|부터)\s*/);
 
@@ -379,15 +446,19 @@ function processChatInput(text) {
       reply = `✓ 출발지를 '<strong>${s.departure}</strong>'(으)로 접수했습니다.`;
     }
 
-    // 4. Extract Destination / Place ("~로 / ~까지 / ~에 / ~가려고 / 도착지:")
+    // 5. Extract Destination / Place ("~로 / ~까지 / ~에 / ~가려고 / 도착지:")
     const destMatch = raw.match(/(?:도착지(?:는|가|:)?\s*|([가-힣a-zA-Z0-9]+(?:\s+[가-힣a-zA-Z0-9]+)?)(?:로|으로|까지|에|행|가려고|가려는데|갈래|예약|바꿀래|바꿀래요))\s*/);
     if (destMatch && destMatch[1] && !destMatch[1].includes("택시") && !["숙소", "식당", "관광", "호텔"].includes(destMatch[1])) {
       s.placeName = cleanSuffixes(destMatch[1]);
       s.destination = s.placeName; // Auto Carry-over
+      if (!s.domain) {
+        s.domain = /뷔페|식당|밥|음식|갈비|치킨|일식|한식/.test(s.placeName) ? "식당" :
+                   /호텔|호스텔|숙소|에어비|모텔|펜션/.test(s.placeName) ? "숙소" : "관광";
+      }
     }
 
-    // 5. Context-aware Direct Place/Departure input:
-    // If destination is ALREADY set but departure is missing, any direct place phrase becomes departure!
+    // 6. Context-aware Direct input:
+    // Case A: Destination is already set, departure is missing -> user input becomes departure!
     if (s.destination && !s.departure && !reply) {
       const cleanedDirect = cleanSuffixes(raw);
       const genericWords = ["숙소", "식당", "관광", "호텔", "모텔", "호스텔", "맛집", "안녕", "반가워", "택시", "배차", "취소", "다시"];
@@ -397,7 +468,7 @@ function processChatInput(text) {
       }
     }
 
-    // 6. Direct / Single-phrase place input (Initial turn where nothing is set)
+    // Case B: Nothing is set yet -> user input becomes place & destination!
     if (!s.placeName && !s.destination && !s.departure && !reply) {
       const cleanedPlace = cleanSuffixes(raw);
       const genericWords = ["숙소", "식당", "관광", "호텔", "모텔", "호스텔", "맛집", "안녕", "반가워", "택시", "배차"];
@@ -405,7 +476,7 @@ function processChatInput(text) {
         s.placeName = cleanedPlace;
         s.destination = cleanedPlace; // Auto Carry-over
         if (!s.domain) {
-          s.domain = /뷔페|식당|밥|음식|갈비|치킨|일식/.test(cleanedPlace) ? "식당" :
+          s.domain = /뷔페|식당|밥|음식|갈비|치킨|일식|한식/.test(cleanedPlace) ? "식당" :
                      /호텔|호스텔|숙소|에어비|모텔|펜션/.test(cleanedPlace) ? "숙소" :
                      /타워|공원|성원|거리|궁|청와대/.test(cleanedPlace) ? "관광" : "식당";
         }
@@ -434,7 +505,7 @@ function processChatInput(text) {
 
     renderChatSlots();
 
-    // 9. Proactive Slot Dialogue Engine (스스로 다음 필요 정보를 능동적으로 질문)
+    // 9. Proactive Sequential Dialogue Question Engine
     let nextPrompt = "";
     if (s.destination && s.departure && s.time) {
       const bCode = "TX-" + Math.floor(10000 + Math.random() * 90000);
@@ -446,7 +517,7 @@ function processChatInput(text) {
                    `- 배정 기사님 번호: <strong>${phone}</strong><br>` +
                    `<small style="color:#70757d;">(정보를 변경하시려면 "도착지를 서울역으로 수정해줘" 처럼 말씀해 주세요.)</small>`;
     } else if (!s.destination) {
-      nextPrompt = `어디로 가시나요? 방문하실 <strong>장소명 또는 도착지</strong>를 말씀해 주세요. (예: "두부두부두부", "심미 호스텔", "서울역")`;
+      nextPrompt = `어디로 가시나요? 방문하실 <strong>장소명 또는 도착지</strong>를 말씀해 주세요. (예: "두부두부두부", "심미 호스텔", "룰루 한식뷔페")`;
     } else if (!s.departure && !s.time) {
       nextPrompt = `어디서 몇 시에 출발하시나요? 택시를 탑승할 <strong>출발지와 출발 시간</strong>을 알려주세요.<br>(예: "호텔 파크에서 14시 30분에 출발", "서울역에서 지금 바로")`;
     } else if (!s.departure) {
@@ -455,11 +526,10 @@ function processChatInput(text) {
       nextPrompt = `출발지(${s.departure})가 확인되었습니다. 몇 시에 탑승하시나요? <strong>출발 시간</strong>을 알려주세요. (예: "15시", "14시 30분", "지금 바로")`;
     }
 
-    // Combine Slot Update Notification + Proactive Question
     const finalMessage = reply ? `${reply}<br><br>${nextPrompt}` : nextPrompt;
     addChatMessage("bot", finalMessage);
   } catch (err) {
-    console.error("Chatbot processing error:", err);
+    console.error("Local engine processing error:", err);
     addChatMessage("bot", "메시지를 처리하는 중 오류가 발생했습니다. 다시 한번 말씀해 주세요.");
   }
 }
