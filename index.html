@@ -303,13 +303,13 @@
 
           <div class="chat-log" id="chat-log">
             <div class="msg bot">
-              안녕하세요! 방문하실 장소나 택시 배차 요청을 말씀해 주세요.
-              <span class="msg-time">장소 접수 ➔ 택시 배차 자동 연계</span>
+              안녕하세요! 택시 예약을 도와드릴게요. 먼저 방문하실 <strong>[장소 이름 또는 도착지]</strong>를 알려주세요.
+              <span class="msg-time">장소 접수 ➔ 택시 도착지로 자동 이월</span>
             </div>
           </div>
 
           <form class="chat-input-bar" onsubmit="event.preventDefault(); handleChatSubmit();">
-            <input type="text" id="chat-text-input" class="chat-input-field" placeholder="메시지를 입력하세요...">
+            <input type="text" id="chat-text-input" class="chat-input-field" placeholder="방문하실 장소 이름을 입력하세요...">
             <button type="submit" class="chat-send-btn">전송</button>
           </form>
         </div>

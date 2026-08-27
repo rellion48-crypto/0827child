@@ -430,7 +430,7 @@ function runLocalSequentialEngine(raw) {
       else if (/관광|명소/.test(raw)) s.domain = "관광";
 
       renderChatSlots();
-      reply = `🔄 슬롯을 모두 초기화하고 처음부터 다시 시작합니다.${s.domain ? ` [선택 도메인: <strong>${s.domain}</strong>]` : ''}<br>방문하실 장소나 출발지를 말씀해 주세요.`;
+      reply = `🔄 슬롯을 모두 초기화하고 처음부터 다시 시작합니다.${s.domain ? ` [선택 도메인: <strong>${s.domain}</strong>]` : ''}<br>먼저 방문하실 <strong>[장소 이름 또는 도착지]</strong>를 말씀해 주세요.`;
       addChatMessage("bot", reply);
       return;
     }
@@ -637,8 +637,8 @@ function resetChat() {
   renderChatSlots();
   document.getElementById("chat-log").innerHTML = `
     <div class="msg bot">
-      안녕하세요! 방문하실 장소나 택시 배차 요청을 말씀해 주세요.
-      <span class="msg-time">장소 접수 ➔ 택시 배차 자동 연계</span>
+      안녕하세요! 택시 예약을 도와드릴게요. 먼저 방문하실 <strong>[장소 이름 또는 도착지]</strong>를 알려주세요.
+      <span class="msg-time">장소 접수 ➔ 택시 도착지로 자동 이월</span>
     </div>
   `;
 }
