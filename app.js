@@ -393,7 +393,7 @@ function processChatInput(text) {
     s.destination = s.placeName; // Auto Carry-over
   }
 
-  // 6. Direct / Single-phrase place input (e.g. "두부두부두부", "남산타워", "창덕궁", "한식뷔페")
+  // 6. Direct / Single-phrase place input (e.g. "두부두부두부", "남산타워", "창덕궁", "한식뷔페", "무궁화 모텔")
   if (!s.placeName && !s.destination && !s.departure && !reply) {
     const cleanedPlace = cleanSuffixes(raw);
     const genericWords = ["숙소", "식당", "관광", "호텔", "모텔", "호스텔", "맛집", "안녕", "반가워", "택시", "배차"];
@@ -402,19 +402,23 @@ function processChatInput(text) {
       s.destination = cleanedPlace; // Auto Carry-over
       if (!s.domain) {
         s.domain = /뷔페|식당|밥|음식|갈비|치킨|일식/.test(cleanedPlace) ? "식당" :
-                   /호텔|호스텔|숙소|에어비/.test(cleanedPlace) ? "숙소" :
+                   /호텔|호스텔|숙소|에어비|모텔|펜션/.test(cleanedPlace) ? "숙소" :
                    /타워|공원|성원|거리|궁|청와대/.test(cleanedPlace) ? "관광" : "식당";
       }
       reply = `✓ 장소 '<strong>${s.placeName}</strong>'(${s.domain})을(를) 접수하여 택시 <strong>도착지</strong>로 자동 이월했습니다.`;
     }
   }
 
-  // 7. Extract Time
-  const timeMatch = raw.match(/(\d{1,2})시\s*(\d{1,2})?분?/) || raw.match(/(\d{1,2}):(\d{2})/);
-  if (timeMatch) {
-    let hour = timeMatch[1].padStart(2, '0');
-    let min = timeMatch[2] ? timeMatch[2].padStart(2, '0') : "00";
-    s.time = `${hour}:${min}`;
+  // 7. Extract Time ("14:30", "15시", "지금 바로", "즉시")
+  if (/지금\s*바로|즉시|바로/.test(raw)) {
+    s.time = "지금 바로 (즉시 탑승)";
+  } else {
+    const timeMatch = raw.match(/(\d{1,2})시\s*(\d{1,2})?분?/) || raw.match(/(\d{1,2}):(\d{2})/);
+    if (timeMatch) {
+      let hour = timeMatch[1].padStart(2, '0');
+      let min = timeMatch[2] ? timeMatch[2].padStart(2, '0') : "00";
+      s.time = `${hour}:${min}`;
+    }
   }
 
   // 8. Extract Taxi Type
@@ -426,30 +430,33 @@ function processChatInput(text) {
 
   renderChatSlots();
 
-  // 9. Generate Conversational Bot Response if not already set
-  if (!reply) {
-    if (s.departure && s.destination && s.time) {
-      const bCode = "TX-" + Math.floor(10000 + Math.random() * 90000);
-      const phone = "010-8376-" + Math.floor(1000 + Math.random() * 9000);
-      reply = `🎉 <strong>택시 배차가 완료되었습니다!</strong><br>` +
-              `- 예약번호: <strong>${bCode}</strong><br>` +
-              `- 출발: ${s.departure} ➔ <strong>도착(이월): ${s.destination}</strong><br>` +
-              `- 출발 시간: ${s.time} (${s.type || '일반 택시'})<br>` +
-              `- 기사님 번호: <strong>${phone}</strong><br>` +
-              `<em>(필요 시 "도착지를 서울역으로 수정해줘" 처럼 입력하여 언제든 수정할 수 있습니다.)</em>`;
-    } else if (s.destination && !s.departure) {
-      reply = `장소 '<strong>${s.destination}</strong>'이(가) 택시 <strong>도착지</strong>로 등록되었습니다.<br>출발지와 출발 시간을 말씀해 주시면 배차를 완료해 드립니다. (예: "호텔 파크에서 14시 30분에 출발")`;
-    } else if (s.departure && !s.destination) {
-      reply = `출발지 '<strong>${s.departure}</strong>'이(가) 확인되었습니다. 도착하실 장소명을 말씀해 주세요. (예: "한식뷔페로 가줘")`;
-    } else {
-      reply = `정보를 반영했습니다. [장소/도착: <strong>${s.destination || s.placeName || '-'}</strong>, 출발: <strong>${s.departure || '-'}</strong>, 시간: <strong>${s.time || '-'}</strong>]<br>배차를 완료하려면 부족한 정보를 말씀해 주세요.`;
-    }
+  // 9. Proactive Slot Dialogue Engine (스스로 다음 필요 정보를 능동적으로 질문)
+  let nextPrompt = "";
+  if (s.destination && s.departure && s.time) {
+    const bCode = "TX-" + Math.floor(10000 + Math.random() * 90000);
+    const phone = "010-8376-" + Math.floor(1000 + Math.random() * 9000);
+    nextPrompt = `🎉 <strong>택시 배차가 성공적으로 완료되었습니다!</strong><br>` +
+                 `- 예약번호: <strong>${bCode}</strong><br>` +
+                 `- 출발지: ${s.departure} ➔ <strong>도착지(이월): ${s.destination}</strong><br>` +
+                 `- 탑승 시간: ${s.time} (${s.type || '일반 택시'})<br>` +
+                 `- 배정 기사님 번호: <strong>${phone}</strong><br>` +
+                 `<small style="color:#70757d;">(정보를 변경하시려면 "도착지를 서울역으로 수정해줘" 처럼 말씀해 주세요.)</small>`;
+  } else if (!s.destination) {
+    nextPrompt = `어디로 가시나요? 방문하실 <strong>장소명 또는 도착지</strong>를 말씀해 주세요. (예: "두부두부두부", "심미 호스텔", "서울역")`;
+  } else if (!s.departure && !s.time) {
+    nextPrompt = `어디서 몇 시에 출발하시나요? 택시를 탑승할 <strong>출발지와 출발 시간</strong>을 알려주세요.<br>(예: "호텔 파크에서 14시 30분에 출발", "서울역에서 지금 바로")`;
+  } else if (!s.departure) {
+    nextPrompt = `출발 시간(${s.time})이 확인되었습니다. 어디서 탑승하시나요? <strong>출발지</strong>를 알려주세요. (예: "호텔 파크", "명동역 3번 출구")`;
+  } else if (!s.time) {
+    nextPrompt = `출발지(${s.departure})가 확인되었습니다. 몇 시에 탑승하시나요? <strong>출발 시간</strong>을 알려주세요. (예: "15시", "14시 30분", "지금 바로")`;
   }
 
-  addChatMessage("bot", reply);
+  // Combine Slot Update Notification + Proactive Question
+  const finalMessage = reply ? `${reply}<br><br>${nextPrompt}` : nextPrompt;
+  addChatMessage("bot", finalMessage);
   } catch (err) {
     console.error("Chatbot processing error:", err);
-    addChatMessage("bot", "메시지를 처리하는 중 일시적인 오류가 발생했습니다. 다시 말씀해 주세요.");
+    addChatMessage("bot", "메시지를 처리하는 중 오류가 발생했습니다. 다시 한번 말씀해 주세요.");
   }
 }
 
