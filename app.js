@@ -65,6 +65,46 @@ function setMode(mode) {
   }
 }
 
+// Known WoS place metadata database
+const PLACE_METADATA = {
+  "두부두부두부": { type: "한식당", price: "저렴", region: "서울 동쪽" },
+  "주점부리": { type: "주점/포차", price: "저렴", region: "서울 동쪽" },
+  "심미 호스텔": { type: "호스텔", price: "저렴", region: "서울 서쪽" },
+  "에버뉴 호텔": { type: "호텔", price: "적당", region: "서울 동쪽" },
+  "파크 호텔": { type: "호텔", price: "비싼", region: "서울 동쪽" },
+  "체리 에어비앤비": { type: "에어비앤비", price: "비싼", region: "서울 중앙" },
+  "서울중앙성원": { type: "문화/관람", price: "무료", region: "서울 중앙" },
+  "가로수길": { type: "쇼핑/거리", price: "무료", region: "서울 남쪽" },
+  "스타필드 코엑스몰": { type: "쇼핑/문화", price: "무료", region: "서울 남쪽" }
+};
+
+function autoResolvePlaceInfo(name, domain) {
+  name = name ? name.trim() : "";
+  if (PLACE_METADATA[name]) {
+    return {
+      type: PLACE_METADATA[name].type,
+      price: PLACE_METADATA[name].price
+    };
+  }
+
+  // Heuristic based on name keywords
+  if (name.includes("호스텔") || name.includes("게스트")) {
+    return { type: "호스텔", price: "저렴" };
+  } else if (name.includes("호텔") || name.includes("파크")) {
+    return { type: "호텔", price: "적당" };
+  } else if (name.includes("에어비")) {
+    return { type: "에어비앤비", price: "적당" };
+  } else if (name.includes("식당") || name.includes("두부") || name.includes("불고기") || name.includes("주점")) {
+    return { type: "한식당", price: "저렴" };
+  }
+
+  // Fallback by domain
+  if (domain === "식당") return { type: "한식당", price: "저렴" };
+  if (domain === "숙소") return { type: "호텔", price: "적당" };
+  if (domain === "관광") return { type: "관람/명소", price: "무료" };
+  return { type: "일반", price: "적당" };
+}
+
 // 4. Form Domain: Domain radio handler
 function handleDomainChange(domain) {
   state.place.domain = domain;
@@ -75,46 +115,52 @@ function handleDomainChange(domain) {
     checkedRadio.parentElement.classList.add("active");
   }
 
-  const lblType = document.getElementById("label-place-type");
-  const inputType = document.getElementById("slot-place-type");
-  const lblDetail = document.getElementById("label-place-detail");
-  const inputDetail = document.getElementById("slot-place-detail");
   const inputName = document.getElementById("slot-place-name");
+  const inputType = document.getElementById("slot-place-type");
+  const inputDetail = document.getElementById("slot-place-detail");
 
   if (domain === "식당") {
-    lblType.textContent = "종류 (음식 종류)";
-    inputType.placeholder = "예: 한식당, 일식, 양식 등";
-    lblDetail.textContent = "가격대 / 주류 여부";
-    inputDetail.placeholder = "예: 저렴, 적당, 주류 판매";
     inputName.value = "두부두부두부";
-    inputType.value = "한식당";
   } else if (domain === "숙소") {
-    lblType.textContent = "종류 (숙소 종류)";
-    inputType.placeholder = "예: 호텔, 호스텔, 에어비앤비 등";
-    lblDetail.textContent = "가격대 / 시설 (주차/스파/조식)";
-    inputDetail.placeholder = "예: 조식 제공, 주차 가능, 스파";
     inputName.value = "심미 호스텔";
-    inputType.value = "호스텔";
   } else if (domain === "관광") {
-    lblType.textContent = "종류 (관광 형태)";
-    inputType.placeholder = "예: 쇼핑, 관람, 문화체험 등";
-    lblDetail.textContent = "입장료 / 특이사항";
-    inputDetail.placeholder = "예: 무료 입장, 교육적";
     inputName.value = "서울중앙성원";
-    inputType.value = "문화/관람";
   }
+
+  const auto = autoResolvePlaceInfo(inputName.value, domain);
+  inputType.value = auto.type;
+  inputDetail.value = auto.price;
+  state.place.type = auto.type;
+  state.place.detail = auto.price;
 }
 
 function initFormValues() {
-  document.getElementById("slot-place-name").value = state.place.name;
+  const inputName = document.getElementById("slot-place-name");
+  const inputType = document.getElementById("slot-place-type");
+  const inputDetail = document.getElementById("slot-place-detail");
+
+  inputName.value = state.place.name;
   document.getElementById("slot-place-region").value = state.place.region;
-  document.getElementById("slot-place-type").value = state.place.type;
-  document.getElementById("slot-place-detail").value = state.place.detail;
+
+  const auto = autoResolvePlaceInfo(state.place.name, state.place.domain);
+  inputType.value = auto.type;
+  inputDetail.value = auto.price;
+  state.place.type = auto.type;
+  state.place.detail = auto.price;
 
   document.getElementById("slot-taxi-departure").value = state.taxi.departure;
   document.getElementById("slot-taxi-destination").value = state.taxi.destination;
   document.getElementById("slot-taxi-time").value = state.taxi.time;
   document.getElementById("slot-taxi-type").value = state.taxi.type;
+
+  // Real-time automatic listener when place name is changed by user
+  inputName.addEventListener("input", (e) => {
+    const resolved = autoResolvePlaceInfo(e.target.value, state.place.domain);
+    inputType.value = resolved.type;
+    inputDetail.value = resolved.price;
+    state.place.type = resolved.type;
+    state.place.detail = resolved.price;
+  });
 }
 
 // 5. Block 1: Submit Place Block ➔ Carry-over to Taxi Block
