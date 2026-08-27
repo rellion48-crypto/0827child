@@ -6,6 +6,8 @@
   <title>장소 접수 ➔ 택시 배차 서비스</title>
   <meta name="description" content="장소 접수부터 택시 배차까지 슬롯 이월 및 실시간 수정을 지원하는 간결한 택시 예약 시스템">
   <link rel="stylesheet" href="index.css">
+  <!-- Supabase JS Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -31,16 +33,6 @@
       </div>
     </div>
   </header>
-
-  <!-- Sub Header / Verification Checklist Bar -->
-  <div class="checklist-bar">
-    <div class="container checklist-items">
-      <span class="chk-label">핵심 기능 검증:</span>
-      <span class="chk-badge" id="chk-connected">✓ 두 블록 연계 (장소 ➔ 택시)</span>
-      <span class="chk-badge" id="chk-carried">✓ 도착지 자동 이월</span>
-      <span class="chk-badge" id="chk-editable">✓ 슬롯 자유 수정 가능</span>
-    </div>
-  </div>
 
   <main class="container main-layout">
 
@@ -100,9 +92,9 @@
 
             <div class="form-group full-width">
               <label class="form-label">
-                장소 이름 (이름) <span class="req">*</span>
+                장소 이름 <span class="req">*</span>
               </label>
-              <input type="text" id="slot-place-name" class="input-control" placeholder="예: 두부두부두부, 심미 호스텔, 서울중앙성원, 숭실대입구" required value="두부두부두부">
+              <input type="text" id="slot-place-name" class="input-control" placeholder="장소 이름을 입력하세요" required value="두부두부두부">
             </div>
 
             <div class="form-group">
@@ -110,7 +102,7 @@
                 종류
                 <span class="label-tag-auto">시스템 자동 지정</span>
               </label>
-              <input type="text" id="slot-place-type" class="input-control auto-input" readonly value="한식당" title="시스템이 장소에 맞춰 자동으로 채워 넣는 칸입니다.">
+              <input type="text" id="slot-place-type" class="input-control auto-input" readonly value="한식당">
             </div>
 
             <div class="form-group" id="group-place-detail">
@@ -118,7 +110,7 @@
                 가격대
                 <span class="label-tag-auto">시스템 자동 지정</span>
               </label>
-              <input type="text" id="slot-place-detail" class="input-control auto-input" readonly value="저렴" title="시스템이 장소에 맞춰 자동으로 채워 넣는 칸입니다.">
+              <input type="text" id="slot-place-detail" class="input-control auto-input" readonly value="저렴">
             </div>
           </div>
 
@@ -138,7 +130,7 @@
         <div class="card-header">
           <div class="date-tag">BLOCK 2</div>
           <h2 class="card-title">택시 배차 접수</h2>
-          <p class="card-desc">장소 정보가 이월되었습니다. 출발지와 탑승 시간을 확인/수정해 주세요.</p>
+          <p class="card-desc">장소 정보가 이월되었습니다. 출발지와 탑승 시간을 확인해 주세요.</p>
         </div>
 
         <!-- Carry-over notice banner -->
@@ -146,7 +138,6 @@
           <div class="carry-badge">도착지 자동 이월됨</div>
           <div class="carry-text">
             앞서 접수한 장소 <strong id="carry-place-text">두부두부두부</strong>(이)가 <strong>도착지</strong>로 자동 지정되었습니다.
-            (필요 시 언제든 아래 입력창에서 직접 수정할 수 있습니다.)
           </div>
         </div>
 
@@ -156,7 +147,7 @@
               <label class="form-label">
                 출발지 <span class="req">*</span>
               </label>
-              <input type="text" id="slot-taxi-departure" class="input-control" placeholder="예: 호텔 파크, 명동역, 건대입구역" required value="호텔 파크">
+              <input type="text" id="slot-taxi-departure" class="input-control" placeholder="출발지를 입력하세요" required value="호텔 파크">
             </div>
 
             <div class="form-group">
@@ -164,7 +155,7 @@
                 도착지 (이월됨 · 수정 가능) <span class="req">*</span>
                 <span class="label-tag-edit">수정 가능</span>
               </label>
-              <input type="text" id="slot-taxi-destination" class="input-control highlight-input" placeholder="도착지 입력" required value="두부두부두부">
+              <input type="text" id="slot-taxi-destination" class="input-control highlight-input" placeholder="도착지를 입력하세요" required value="두부두부두부">
             </div>
 
             <div class="form-group">
@@ -235,13 +226,17 @@
               <strong class="item-val" id="res-type">일반 택시</strong>
             </div>
             <div class="ticket-item">
-              <span class="item-lbl">기사님 연락처 (자동)</span>
+              <span class="item-lbl">기사님 연락처</span>
               <strong class="item-val" id="res-phone">010-8376-2540</strong>
             </div>
             <div class="ticket-item">
               <span class="item-lbl">연계된 장소 정보</span>
-              <strong class="item-val" id="res-place-summary">식당 · 두부두부두부 (서울 동쪽)</strong>
+              <strong class="item-val" id="res-place-summary">식당 · 두부두부두부</strong>
             </div>
+          </div>
+
+          <div id="supabase-save-status" style="margin-top: 14px; font-size: 13px; color: #0457c8; font-weight: 600; text-align: center;">
+            ☁️ Supabase 실시간 DB 동기화 완료
           </div>
         </div>
 
@@ -294,13 +289,6 @@
               <span class="s-val" id="c-val-type">-</span>
             </div>
           </div>
-
-          <div class="quick-prompts">
-            <span class="quick-title">⚡ 빠른 테스트 입력:</span>
-            <button class="quick-btn" onclick="sendQuickChat('서울 동쪽에 두부두부두부 식당 예약할게요.')">1. 식당 접수</button>
-            <button class="quick-btn" onclick="sendQuickChat('호텔 파크에서 14시 30분에 일반 택시 불러주세요.')">2. 택시 배차 (도착지 이월)</button>
-            <button class="quick-btn" onclick="sendQuickChat('도착지를 심미 호스텔로 수정해줘.')">3. 도착지 수정</button>
-          </div>
         </div>
 
         <!-- Chat Conversation Window -->
@@ -315,13 +303,13 @@
 
           <div class="chat-log" id="chat-log">
             <div class="msg bot">
-              안녕하세요! 방문하실 장소(식당/숙소/관광)나 택시 배차 요청을 말씀해 주세요.
+              안녕하세요! 방문하실 장소나 택시 배차 요청을 말씀해 주세요.
               <span class="msg-time">장소 접수 ➔ 택시 배차 자동 연계</span>
             </div>
           </div>
 
           <form class="chat-input-bar" onsubmit="event.preventDefault(); handleChatSubmit();">
-            <input type="text" id="chat-text-input" class="chat-input-field" placeholder="메시지를 입력하세요 (예: 서울 동쪽 두부두부두부 식당 가려고요)...">
+            <input type="text" id="chat-text-input" class="chat-input-field" placeholder="메시지를 입력하세요...">
             <button type="submit" class="chat-send-btn">전송</button>
           </form>
         </div>
