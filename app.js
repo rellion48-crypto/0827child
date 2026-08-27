@@ -293,21 +293,22 @@ const GEMINI_CONFIG = {
 const SYSTEM_PROMPT = `당신은 한국의 [장소 접수 -> 택시 배차] 전문 대화형 AI 어시스턴트입니다.
 사용자와 자연스럽게 대화하며 다음 슬롯들을 채우고, 배차 완료까지 필요한 질문을 순차적으로 자연스럽게 물어봅니다.
 
-슬롯 목록:
+슬롯 목록 (4대 필수 슬롯):
 - domain: "식당", "숙소", "관광" 중 하나
 - placeName: 사용자가 방문하려는 구체적 장소 이름
-- departure: 택시 출발지
 - destination: 택시 도착지 (장소명이 입력되면 자동으로 동일하게 이월됨. 사용자가 별도 도착지를 말하면 수정 가능)
+- departure: 택시 출발지
 - time: 탑승/출발 시간
-- type: 택시 종류 (기본 '일반 택시')
+- type: 택시 종류 ("일반 택시", "모범 택시", "고급 택시", "대형 밴", "무관" 중 하나)
 
 핵심 동작 규칙:
 1. [장소명/도착지 이월]: 사용자가 구체적 장소명을 말하면 domain을 판단하고, placeName과 택시 destination 슬롯에 동일하게 즉시 채워 넣습니다.
 2. [카테고리/도메인만 말한 경우]: 사용자가 "식당", "숙소", "관광"처럼 카테고리만 말했을 때는 domain만 채우고 placeName은 비워둡니다. 그리고 구체적인 장소명을 질문합니다.
-3. [슬롯 수정]: 사용자가 도착지/출발지/시간 수정을 요청하면 해당 슬롯을 즉시 갱신합니다.
-4. [초기화]: "처음부터 다시", "초기화" 요청 시 모든 슬롯을 빈 문자열("")로 리셋합니다.
-5. [배차 완료]: destination, departure, time 3가지가 모두 채워지면 예약번호(TX-XXXXX), 기사님 번호(010-8376-XXXX)와 함께 배차 완료 메시지를 작성합니다.
-6. [순차적 유도 질문 (reply)]: 부족한 슬롯이 무엇인지 파악하여 다음에 사용자가 무엇을 입력해야 하는지 명확하고 간결하게 질문합니다. (불필요한 긴 예시 나열 지양)
+3. [택시 종류 입력 필수]: destination, departure, time, type 4가지 필수 슬롯이 모두 채워져야만 배차가 완료됩니다. 택시 종류(type)가 비어있다면 반드시 [일반 / 모범 / 고급 / 대형 / 무관] 중에서 질문하여 받아내세요.
+4. [슬롯 수정]: 사용자가 도착지/출발지/시간/택시종류 수정을 요청하면 해당 슬롯을 즉시 갱신합니다.
+5. [초기화]: "처음부터 다시", "초기화" 요청 시 모든 슬롯을 빈 문자열("")로 리셋합니다.
+6. [배차 완료]: 4개 슬롯이 모두 완비되었을 때만 예약번호(TX-XXXXX), 기사님 번호(010-8376-XXXX)와 함께 배차 완료 메시지를 작성합니다.
+7. [순차적 유도 질문 (reply)]: 부족한 슬롯이 무엇인지 파악하여 다음에 사용자가 무엇을 입력해야 하는지 명확하고 간결하게 질문합니다.
 
 반드시 마크다운 코드블록 없이 아래 순수 JSON 형식으로만 답하세요:
 {
@@ -385,12 +386,12 @@ async function processChatInput(text) {
           }
           renderChatSlots();
 
-          // If fully booked, sync to Supabase
-          if (state.chatSlots.destination && state.chatSlots.departure && state.chatSlots.time) {
+          // If fully booked with all 4 slots, sync to Supabase
+          if (state.chatSlots.destination && state.chatSlots.departure && state.chatSlots.time && state.chatSlots.type) {
             const bCode = "TX-" + Math.floor(10000 + Math.random() * 90000);
             saveReservationToSupabase(
               { domain: state.chatSlots.domain, name: state.chatSlots.placeName },
-              { bookingCode: bCode, destination: state.chatSlots.destination, departure: state.chatSlots.departure, time: state.chatSlots.time, type: state.chatSlots.type || "일반", driverPhone: "010-8376-2540" }
+              { bookingCode: bCode, destination: state.chatSlots.destination, departure: state.chatSlots.departure, time: state.chatSlots.time, type: state.chatSlots.type, driverPhone: "010-8376-2540" }
             );
           }
 
@@ -438,6 +439,7 @@ function runLocalSequentialEngine(raw) {
     const destModifyMatch = raw.match(/(?:도착지|목적지|장소)(?:를|는|가|로)?\s*([가-힣a-zA-Z0-9\s]+?)(?:[으|로|을|를|에|으로]?\s*(?:수정|바꿔|변경|할래|해줘))/);
     const depModifyMatch = raw.match(/출발지(?:를|는|가|에서)?\s*([가-힣a-zA-Z0-9\s]+?)(?:[으|로|을|를|에|으로]?\s*(?:수정|바꿔|변경|할래|해줘))/);
     const timeModifyMatch = raw.match(/시간(?:을|는|으로)?\s*([0-9\:\s시분]+?)(?:[으|로|에]?\s*(?:수정|바꿔|변경|해줘))/);
+    const typeModifyMatch = raw.match(/(?:종류|택시|차종)(?:를|는|가|로)?\s*([가-힣a-zA-Z0-9\s]+?)(?:[으|로|을|를|에|으로]?\s*(?:수정|바꿔|변경|할래|해줘))/);
 
     if (destModifyMatch && destModifyMatch[1]) {
       s.placeName = cleanSuffixes(destModifyMatch[1]);
@@ -449,6 +451,14 @@ function runLocalSequentialEngine(raw) {
     } else if (timeModifyMatch && timeModifyMatch[1]) {
       s.time = timeModifyMatch[1].trim();
       reply = `✓ 출발 시간을 '<strong>${s.time}</strong>'(으)로 수정했습니다.`;
+    } else if (typeModifyMatch && typeModifyMatch[1]) {
+      const t = typeModifyMatch[1].trim();
+      if (t.includes("모범")) s.type = "모범 택시";
+      else if (t.includes("고급") || t.includes("블랙")) s.type = "고급 택시";
+      else if (t.includes("대형") || t.includes("밴")) s.type = "대형 밴";
+      else if (t.includes("일반")) s.type = "일반 택시";
+      else if (t.includes("상관") || t.includes("무관") || t.includes("아무")) s.type = "무관 (dontcare)";
+      reply = `✓ 택시 종류를 '<strong>${s.type}</strong>'(으)로 수정했습니다.`;
     }
 
     // 2. Explicit Domain Only Selection
@@ -471,7 +481,7 @@ function runLocalSequentialEngine(raw) {
 
     // 3. Extract Place Name when explicitly phrased
     const explicitPlaceMatch = raw.match(/([가-힣a-zA-Z0-9\s]+?)(?:가|이|는|은)?\s*(?:식당|숙소|호텔|가게|장소)?\s*(?:이름이야|이름입니다|이름|으로\s*할게|갈게요|갈래)/);
-    if (explicitPlaceMatch && explicitPlaceMatch[1] && !["출발지", "도착지", "시간", "택시"].includes(explicitPlaceMatch[1])) {
+    if (explicitPlaceMatch && explicitPlaceMatch[1] && !["출발지", "도착지", "시간", "택시", "종류"].includes(explicitPlaceMatch[1])) {
       const pName = cleanSuffixes(explicitPlaceMatch[1]);
       if (pName.length > 0 && !["숙소", "식당", "관광"].includes(pName)) {
         s.placeName = pName;
@@ -498,7 +508,7 @@ function runLocalSequentialEngine(raw) {
 
     // 5. Extract Destination / Place
     const destMatch = raw.match(/(?:도착지(?:는|가|:)?\s*|([가-힣a-zA-Z0-9]+(?:\s+[가-힣a-zA-Z0-9]+)?)(?:로|으로|까지|에|행|가려고|가려는데|갈래|예약|바꿀래|바꿀래요))\s*/);
-    if (destMatch && destMatch[1] && !destMatch[1].includes("택시") && !["숙소", "식당", "관광", "호텔"].includes(destMatch[1])) {
+    if (destMatch && destMatch[1] && !destMatch[1].includes("택시") && !["숙소", "식당", "관광", "호텔", "일반", "모범", "고급", "대형"].includes(destMatch[1])) {
       s.placeName = cleanSuffixes(destMatch[1]);
       s.destination = s.placeName;
       if (!s.domain) {
@@ -507,10 +517,17 @@ function runLocalSequentialEngine(raw) {
       }
     }
 
-    // 6. Context-aware Direct input
+    // 6. Extract Taxi Type
+    if (/(?:모범|모범택시)/.test(raw)) s.type = "모범 택시";
+    else if (/(?:고급|블랙|고급택시|카카오블랙)/.test(raw)) s.type = "고급 택시";
+    else if (/(?:대형|밴|벤|대형택시|대형밴|카니발)/.test(raw)) s.type = "대형 밴";
+    else if (/(?:일반|일반택시|보통|기본|중형)/.test(raw)) s.type = "일반 택시";
+    else if (/(?:상관없|아무거나|무관|dontcare|아무 택시|상관 없음|아무거나요)/.test(raw)) s.type = "무관 (dontcare)";
+
+    // 7. Context-aware Direct input
     if (s.destination && !s.departure && !reply) {
       const cleanedDirect = cleanSuffixes(raw);
-      const genericWords = ["숙소", "식당", "관광", "호텔", "모텔", "호스텔", "맛집", "안녕", "반가워", "택시", "배차", "취소", "다시"];
+      const genericWords = ["숙소", "식당", "관광", "호텔", "모텔", "호스텔", "맛집", "안녕", "반가워", "택시", "배차", "취소", "다시", "일반", "모범", "고급", "대형", "무관", "아무거나"];
       if (cleanedDirect.length > 0 && !genericWords.includes(cleanedDirect) && !/^\d{1,2}(?::\d{2}|시)/.test(cleanedDirect)) {
         s.departure = cleanedDirect;
         reply = `✓ 출발지를 '<strong>${s.departure}</strong>'(으)로 접수했습니다.`;
@@ -519,7 +536,7 @@ function runLocalSequentialEngine(raw) {
 
     if (!s.placeName && !s.destination && !s.departure && !reply) {
       const cleanedPlace = cleanSuffixes(raw);
-      const genericWords = ["숙소", "식당", "관광", "호텔", "모텔", "호스텔", "맛집", "안녕", "반가워", "택시", "배차"];
+      const genericWords = ["숙소", "식당", "관광", "호텔", "모텔", "호스텔", "맛집", "안녕", "반가워", "택시", "배차", "일반", "모범", "고급", "대형", "무관"];
       if (cleanedPlace.length > 0 && !genericWords.includes(cleanedPlace)) {
         s.placeName = cleanedPlace;
         s.destination = cleanedPlace;
@@ -532,7 +549,7 @@ function runLocalSequentialEngine(raw) {
       }
     }
 
-    // 7. Extract Time
+    // 8. Extract Time
     if (/지금\s*바로|즉시|바로/.test(raw)) {
       s.time = "지금 바로 (즉시 탑승)";
     } else {
@@ -544,41 +561,36 @@ function runLocalSequentialEngine(raw) {
       }
     }
 
-    // 8. Extract Taxi Type
-    if (raw.includes("모범")) s.type = "모범 택시";
-    else if (raw.includes("고급") || raw.includes("블랙")) s.type = "고급 택시";
-    else if (raw.includes("대형") || raw.includes("밴")) s.type = "대형 밴";
-    else if (raw.includes("일반")) s.type = "일반 택시";
-    else if (raw.includes("상관없") || raw.includes("아무거나") || raw.includes("무관")) s.type = "무관 (dontcare)";
-
     renderChatSlots();
 
-    // 9. Proactive Sequential Dialogue Question Engine
+    // 9. Proactive Sequential Dialogue Question Engine (4대 필수 슬롯)
     let nextPrompt = "";
-    if (s.destination && s.departure && s.time) {
+    if (s.destination && s.departure && s.time && s.type) {
       const bCode = "TX-" + Math.floor(10000 + Math.random() * 90000);
       const phone = "010-8376-" + Math.floor(1000 + Math.random() * 9000);
 
       // Save to Supabase DB
       saveReservationToSupabase(
         { domain: s.domain, name: s.placeName },
-        { bookingCode: bCode, destination: s.destination, departure: s.departure, time: s.time, type: s.type || "일반", driverPhone: phone }
+        { bookingCode: bCode, destination: s.destination, departure: s.departure, time: s.time, type: s.type, driverPhone: phone }
       );
 
       nextPrompt = `🎉 <strong>택시 배차가 성공적으로 완료되었습니다!</strong><br>` +
                    `- 예약번호: <strong>${bCode}</strong><br>` +
                    `- 출발지: ${s.departure} ➔ <strong>도착지(이월): ${s.destination}</strong><br>` +
-                   `- 탑승 시간: ${s.time} (${s.type || '일반 택시'})<br>` +
+                   `- 탑승 시간: ${s.time} (<strong>${s.type}</strong>)<br>` +
                    `- 배정 기사님 번호: <strong>${phone}</strong><br>` +
                    `<small style="color:#0457c8; font-weight:600;">☁️ Supabase 실시간 DB 저장 완료</small>`;
     } else if (!s.destination) {
       nextPrompt = `어디로 가시나요? 방문하실 <strong>장소명 또는 도착지</strong>를 말씀해 주세요.`;
-    } else if (!s.departure && !s.time) {
-      nextPrompt = `어디서 몇 시에 출발하시나요? 택시를 탑승할 <strong>출발지와 출발 시간</strong>을 알려주세요.`;
+    } else if (!s.departure && !s.time && !s.type) {
+      nextPrompt = `어디서 몇 시에 출발하시나요? 탑승할 <strong>[출발지, 출발 시간, 택시 종류]</strong>를 알려주세요.<br><small style="color:#64748b;">(택시 종류: 일반 / 모범 / 고급 / 대형 / 무관)</small>`;
     } else if (!s.departure) {
-      nextPrompt = `출발 시간이 확인되었습니다. 어디서 탑승하시나요? <strong>출발지</strong>를 알려주세요.`;
+      nextPrompt = `어디서 탑승하시나요? <strong>출발지</strong>를 알려주세요.`;
     } else if (!s.time) {
-      nextPrompt = `출발지가 확인되었습니다. 몇 시에 탑승하시나요? <strong>출발 시간</strong>을 알려주세요.`;
+      nextPrompt = `몇 시에 탑승하시나요? <strong>출발 시간</strong>을 알려주세요.`;
+    } else if (!s.type) {
+      nextPrompt = `어떤 종류의 택시를 부를까요? <strong>택시 종류</strong>를 알려주세요.<br><small style="color:#0457c8; font-weight:600;">[일반 택시 / 모범 택시 / 고급 택시 / 대형 밴 / 무관]</small>`;
     }
 
     const finalMessage = reply ? `${reply}<br><br>${nextPrompt}` : nextPrompt;
