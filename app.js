@@ -245,8 +245,15 @@ function updateChecklistBadges() {
 }
 
 // ==========================================================================
-// 8. Chatbot Domain: Dialogue & Slot Engine
+// 8. Chatbot Domain: Flexible Natural Language Dialogue & Slot Engine
 // ==========================================================================
+
+function cleanSuffixes(str) {
+  if (!str) return "";
+  return str
+    .replace(/(?:이라고|라고|이야|야|입니다|이요|요|으로|로|에|까지|가려고|가려는데|가자|예약해줘|예약할게|예약|찾아줘|갈래|불러줘|잡아줘)$/g, "")
+    .trim();
+}
 
 function handleChatSubmit() {
   const input = document.getElementById("chat-text-input");
@@ -258,7 +265,7 @@ function handleChatSubmit() {
 
   setTimeout(() => {
     processChatInput(text);
-  }, 300);
+  }, 250);
 }
 
 function sendQuickChat(text) {
@@ -278,56 +285,71 @@ function addChatMessage(sender, text) {
 function processChatInput(text) {
   let reply = "";
   const s = state.chatSlots;
+  const raw = text.trim();
 
-  // 1. Extract Place Domain
-  if (text.includes("식당") || text.includes("음식") || text.includes("밥")) s.domain = "식당";
-  else if (text.includes("숙소") || text.includes("호텔") || text.includes("호스텔")) s.domain = "숙소";
-  else if (text.includes("관광") || text.includes("명소")) s.domain = "관광";
+  // 1. Check for Modification/Correction Requests (수정 요청)
+  const isCorrection = raw.includes("수정") || raw.includes("바꿔") || raw.includes("변경") || raw.includes("아니고");
+  
+  const destModifyMatch = raw.match(/도착지(?:를|는|가|로)?\s*([가-힣a-zA-Z0-9\s]+?)(?:[으|로|을|를|에|으로]?\s*(?:수정|바꿔|변경|할래|해줘))/);
+  const depModifyMatch = raw.match(/출발지(?:를|는|가|에서)?\s*([가-힣a-zA-Z0-9\s]+?)(?:[으|로|을|를|에|으로]?\s*(?:수정|바꿔|변경|할래|해줘))/);
+  const timeModifyMatch = raw.match(/시간(?:을|는|으로)?\s*([0-9\:\s시분]+?)(?:[으|로|에]?\s*(?:수정|바꿔|변경|해줘))/);
 
-  // 2. Extract Place Name
-  if (text.includes("두부두부두부")) s.placeName = "두부두부두부";
-  else if (text.includes("심미 호스텔")) s.placeName = "심미 호스텔";
-  else if (text.includes("서울중앙성원")) s.placeName = "서울중앙성원";
-  else if (text.includes("에버뉴 호텔")) s.placeName = "에버뉴 호텔";
-  else if (text.includes("파크 호텔")) s.placeName = "파크 호텔";
+  if (destModifyMatch && destModifyMatch[1]) {
+    s.destination = cleanSuffixes(destModifyMatch[1]);
+    reply = `✓ 도착지를 '<strong>${s.destination}</strong>'(으)로 수정했습니다.`;
+  } else if (depModifyMatch && depModifyMatch[1]) {
+    s.departure = cleanSuffixes(depModifyMatch[1]);
+    reply = `✓ 출발지를 '<strong>${s.departure}</strong>'(으)로 수정했습니다.`;
+  } else if (timeModifyMatch && timeModifyMatch[1]) {
+    s.time = timeModifyMatch[1].trim();
+    reply = `✓ 출발 시간을 '<strong>${s.time}</strong>'(으)로 수정했습니다.`;
+  }
 
-  // 3. Extract Region
-  if (text.includes("서울 동쪽")) s.region = "서울 동쪽";
-  else if (text.includes("서울 중앙")) s.region = "서울 중앙";
-  else if (text.includes("서울 서쪽")) s.region = "서울 서쪽";
-  else if (text.includes("서울 남쪽")) s.region = "서울 남쪽";
-  else if (text.includes("서울 북쪽")) s.region = "서울 북쪽";
+  // 2. Extract Domain if mentioned
+  if (/식당|음식|밥|뷔페|갈비|고기|한식|일식|중식|양식|카페|베이커리|맛집/.test(raw)) {
+    s.domain = "식당";
+  } else if (/호텔|숙소|호스텔|모텔|게스트|에어비|펜션|리조트/.test(raw)) {
+    s.domain = "숙소";
+  } else if (/관광|명소|공원|타워|박물관|미술관|성원|거리|궁|유원지/.test(raw)) {
+    s.domain = "관광";
+  }
 
-  // 4. Extract Modifications / Corrections (수정 처리)
-  if (text.includes("수정") || text.includes("바꿔") || text.includes("변경")) {
-    if (text.includes("도착지") || text.includes("목적지")) {
-      const match = text.match(/도착지(?:를|는)?\s*([가-힣a-zA-Z0-9\s]+?)(?:으?로|을|\s*수정|\s*바꿔)/);
-      if (match && match[1]) {
-        s.destination = match[1].trim();
-      } else if (s.placeName) {
-        s.destination = s.placeName;
+  // 3. Extract Region if mentioned
+  const regionMatch = raw.match(/(서울\s*(?:동쪽|서쪽|중앙|남쪽|북쪽|중구|종로|강남|송파|마포|용산|광진))/);
+  if (regionMatch) {
+    s.region = regionMatch[1].replace(/\s+/g, ' ');
+  }
+
+  // 4. Extract Departure ("~에서 / ~서 / ~부터 / 출발지:")
+  const depMatch = raw.match(/(?:출발지(?:는|가|:)?\s*|([가-힣a-zA-Z0-9]+(?:\s+[가-힣a-zA-Z0-9]+)?)(?:에서|서|부터))\s*/);
+  if (depMatch && depMatch[1] && !depMatch[1].includes("서울")) {
+    s.departure = cleanSuffixes(depMatch[1]);
+  }
+
+  // 5. Extract Destination / Place ("~로 / ~까지 / ~에 / ~가려고 / 도착지:")
+  const destMatch = raw.match(/(?:도착지(?:는|가|:)?\s*|([가-힣a-zA-Z0-9]+(?:\s+[가-힣a-zA-Z0-9]+)?)(?:로|으로|까지|에|행|가려고|가려는데|갈래|예약))\s*/);
+  if (destMatch && destMatch[1] && !destMatch[1].includes("택시") && !destMatch[1].includes("서울")) {
+    s.placeName = cleanSuffixes(destMatch[1]);
+    s.destination = s.placeName; // Auto Carry-over
+  }
+
+  // 6. Direct / Single-phrase input (e.g. "한식뷔페라고", "두부두부두부", "남산타워")
+  if (!s.placeName && !s.destination && !s.departure && !reply) {
+    const cleaned = cleanSuffixes(raw);
+    if (cleaned.length > 0 && !["안녕", "반가워", "택시", "배차"].includes(cleaned)) {
+      s.placeName = cleaned;
+      s.destination = cleaned; // Auto Carry-over
+      if (!s.domain) {
+        s.domain = /뷔페|식당|밥|음식|갈비|한식|일식/.test(cleaned) ? "식당" :
+                   /호텔|호스텔|숙소|에어비/.test(cleaned) ? "숙소" :
+                   /타워|공원|성원|거리|궁/.test(cleaned) ? "관광" : "식당";
       }
-      reply = `✓ 도착지를 '${s.destination}'(으)로 수정했습니다.`;
-    }
-    if (text.includes("출발지")) {
-      const match = text.match(/출발지(?:를|는)?\s*([가-힣a-zA-Z0-9\s]+?)(?:으?로|을|\s*수정|\s*바꿔)/);
-      if (match && match[1]) s.departure = match[1].trim();
-      reply = `✓ 출발지를 '${s.departure}'(으)로 수정했습니다.`;
+      reply = `✓ 장소 '<strong>${s.placeName}</strong>'(${s.domain})을(를) 접수하여 택시 <strong>도착지</strong>로 자동 이월했습니다.`;
     }
   }
-
-  // 5. Carry-over logic: When placeName is identified and destination is not manually overwritten
-  if (s.placeName && !s.destination) {
-    s.destination = s.placeName;
-  }
-
-  // 6. Extract Departure
-  if (text.includes("호텔 파크")) s.departure = "호텔 파크";
-  else if (text.includes("명동역")) s.departure = "명동역";
-  else if (text.includes("서울역")) s.departure = "서울역";
 
   // 7. Extract Time
-  const timeMatch = text.match(/(\d{1,2})시\s*(\d{1,2})?분?/) || text.match(/(\d{1,2}):(\d{2})/);
+  const timeMatch = raw.match(/(\d{1,2})시\s*(\d{1,2})?분?/) || raw.match(/(\d{1,2}):(\d{2})/);
   if (timeMatch) {
     let hour = timeMatch[1].padStart(2, '0');
     let min = timeMatch[2] ? timeMatch[2].padStart(2, '0') : "00";
@@ -335,15 +357,15 @@ function processChatInput(text) {
   }
 
   // 8. Extract Taxi Type
-  if (text.includes("모범")) s.type = "모범 택시";
-  else if (text.includes("고급")) s.type = "고급 택시";
-  else if (text.includes("대형")) s.type = "대형 밴";
-  else if (text.includes("일반")) s.type = "일반 택시";
-  else if (text.includes("상관없") || text.includes("아무거나")) s.type = "무관 (dontcare)";
+  if (raw.includes("모범")) s.type = "모범 택시";
+  else if (raw.includes("고급") || raw.includes("블랙")) s.type = "고급 택시";
+  else if (raw.includes("대형") || raw.includes("밴")) s.type = "대형 밴";
+  else if (raw.includes("일반")) s.type = "일반 택시";
+  else if (raw.includes("상관없") || raw.includes("아무거나") || raw.includes("무관")) s.type = "무관 (dontcare)";
 
   renderChatSlots();
 
-  // Generate conversational bot response
+  // 9. Generate Conversational Bot Response if not already set
   if (!reply) {
     if (s.departure && s.destination && s.time) {
       const bCode = "TX-" + Math.floor(10000 + Math.random() * 90000);
@@ -354,10 +376,12 @@ function processChatInput(text) {
               `- 출발 시간: ${s.time} (${s.type || '일반 택시'})<br>` +
               `- 기사님 번호: <strong>${phone}</strong><br>` +
               `<em>(필요 시 "도착지를 서울역으로 수정해줘" 처럼 입력하여 언제든 수정할 수 있습니다.)</em>`;
-    } else if (s.placeName && !s.departure) {
-      reply = `장소 '<strong>${s.placeName}</strong>'이(가) 접수되어 택시 <strong>도착지</strong>로 자동 이월되었습니다.<br>출발지와 원하시는 출발 시간을 말씀해 주시면 배차해 드리겠습니다. (예: "호텔 파크에서 14시 30분에 일반 택시 불러줘")`;
+    } else if (s.destination && !s.departure) {
+      reply = `장소 '<strong>${s.destination}</strong>'이(가) 택시 <strong>도착지</strong>로 등록되었습니다.<br>출발지와 출발 시간을 말씀해 주시면 배차를 완료해 드립니다. (예: "호텔 파크에서 14시 30분에 출발")`;
+    } else if (s.departure && !s.destination) {
+      reply = `출발지 '<strong>${s.departure}</strong>'이(가) 확인되었습니다. 도착하실 장소명을 말씀해 주세요. (예: "한식뷔페로 가줘")`;
     } else {
-      reply = `정보가 반영되었습니다. [장소: ${s.placeName || '-'}, 출발: ${s.departure || '-'}, 도착(이월): ${s.destination || '-'}, 시간: ${s.time || '-'}]<br>배차를 완료하려면 부족한 정보를 말씀해 주세요.`;
+      reply = `정보를 반영했습니다. [장소/도착: <strong>${s.destination || s.placeName || '-'}</strong>, 출발: <strong>${s.departure || '-'}</strong>, 시간: <strong>${s.time || '-'}</strong>]<br>배차를 완료하려면 부족한 정보를 말씀해 주세요.`;
     }
   }
 
