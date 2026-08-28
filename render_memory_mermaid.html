@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>스마트 메모리 봇(HISTORY_TURNS = 1) 전용 Mermaid 구조도 & 플로우 다이어그램</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px;
+      background: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Pretendard", "Segoe UI", Roboto, sans-serif;
+      color: #0f172a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 36px;
+    }
+    .header {
+      text-align: center;
+      max-width: 1440px;
+    }
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 12px 0;
+      letter-spacing: -0.5px;
+    }
+    p {
+      font-size: 16px;
+      color: #475569;
+      margin: 0 0 16px 0;
+      line-height: 1.6;
+    }
+    .btn-group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .btn-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #0457c8;
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 10px 22px;
+      border-radius: 9999px;
+      box-shadow: 0 4px 12px rgba(4, 87, 200, 0.2);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-nav:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(4, 87, 200, 0.35);
+      background: #03449e;
+    }
+    .btn-nav.game-btn {
+      background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+      box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+    }
+    .btn-nav.game-btn:hover {
+      background: linear-gradient(135deg, #db2777 0%, #7c3aed 100%);
+    }
+    .diagram-card {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 16px;
+      padding: 32px 36px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+      width: 1440px;
+      box-sizing: border-box;
+    }
+    .diagram-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 22px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .badge {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: #eff6ff;
+      color: #2563eb;
+      border: 1px solid #bfdbfe;
+    }
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>🧠 스마트 메모리 봇 (HISTORY_TURNS = 1) 전용 상세 구조도</h1>
+    <p>1-Turn 제약 환경 속 외부 영구 슬롯 메모리(External Memory) 주입, 동적 User ID 발급, 3단 UI 동기화, Supabase 실시간 저장 및 대기 게임 연동 플로우</p>
+    <div class="btn-group">
+      <a href="memory_bot.html" class="btn-nav">
+        <span>💬</span>
+        <span>스마트 메모리 챗봇 화면으로 이동</span>
+      </a>
+      <a href="index.html" class="btn-nav">
+        <span>🏠</span>
+        <span>메인 서비스 화면</span>
+      </a>
+      <a href="https://adeven-small-one.vercel.app/" target="_blank" class="btn-nav game-btn">
+        <span>🎮</span>
+        <span>택시 대기 미니게임 바로가기</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- 1. Sequence Diagram -->
+  <div class="diagram-card">
+    <div class="diagram-title">
+      <span>1. 1-Turn 제약 극복 상세 시퀀스 다이어그램 (Sequence Diagram)</span>
+      <span class="badge">Actors: User(Unique ID) · Memory Engine · LLM · Supabase · Game</span>
+    </div>
+    <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as 👤 User (고유 ID: USR-XXXX)
+    participant UI as 🖥️ Web UI (3단 가로 분할 레이아웃)
+    participant Controller as ⚡ Memory Bot Engine (HISTORY_TURNS=1 제약)
+    participant ExtMem as 🧠 External Slot Memory (영구 보존 메모리)
+    participant LLM as 🧠 Gemini 3.5 LLM (gemini-3.5-flash-lite)
+    participant DB as ☁️ Supabase DB (places & taxi_reservations)
+    participant Game as 🎮 Waiting Mini Game (adeven-small-one)
+
+    Note over User, Game: [1단계: 세션 시작 & 고유 USER ID 발급]
+    User->>UI: 페이지 접속 / 새로고침(F5)
+    UI->>Controller: generateUniqueUserId() 실행
+    Controller-->>UI: 중복 없는 고유 식별자 발급 (예: USR-8X92-3419)
+    UI-->>User: 상단 네비게이션에 USER ID 표출 & 초기 안내
+
+    Note over User, Game: [2단계: 1-Turn 발화 & 외부 메모리 병합]
+    User->>UI: 1턴 발화: "두부두부두부 식당 갈래"
+    UI->>Controller: 직전 1턴 텍스트만 전달 (HISTORY_TURNS = 1)
+    Controller->>ExtMem: 현재 누적 메모리 상태 조회
+    ExtMem-->>Controller: { domain: "", placeName: "", destination: "", ... }
+    Controller->>LLM: 프롬프트 전달: [외부 메모리 JSON + 직전 1턴 발화]
+    LLM-->>Controller: 슬롯 JSON 반환: { domain: "식당", placeName: "두부두부두부" }
+    Controller->>ExtMem: placeName="두부두부두부" & destination="두부두부두부" (자동 이월)
+    Controller->>UI: 3단 화면 (단계별 현황 + 실시간 예약 정보 현황) 실시간 갱신
+
+    Note over User, Game: [3단계: 턴이 지나도 외부 메모리 참조로 연속성 유지]
+    User->>UI: 다음 턴 발화: "호텔 파크에서 14시 30분에 일반 택시로 불러줘"
+    UI->>Controller: 직전 1턴 발화만 전달 (과거 '두부식당' 대화 텍스트는 소실됨)
+    Controller->>LLM: [외부 메모리(두부두부두부 보존) + 1턴 발화] 주입
+    LLM-->>Controller: { departure: "호텔 파크", time: "14:30", type: "일반 택시" }
+    Controller->>ExtMem: 4대 필수 슬롯 완비 (destination, departure, time, type)
+
+    Note over User, Game: [4단계: 배차 확정 & Supabase 저장 & 대기 미니게임 연동]
+    Controller->>Controller: 예약번호 발급 (TX-93806), 기사 배정 (010-8376-2540)
+    Controller->>DB: places & taxi_reservations 실시간 INSERT
+    DB-->>Controller: 201 Created 저장 성공
+    Controller->>UI: 배차 완료 티켓 & [🎮 택시 기다리는 동안 게임하기!] 버튼 표출
+    User->>Game: 게임하기 버튼 클릭 ➔ 미니게임 플레이
+    </div>
+  </div>
+
+  <!-- 2. Flowchart Diagram -->
+  <div class="diagram-card">
+    <div class="diagram-title">
+      <span>2. 1-Turn 메모리 봇 서비스 파이프라인 및 수정 루프 (Flowchart TD)</span>
+      <span class="badge">Pipeline & Memory Injection</span>
+    </div>
+    <div class="mermaid">
+flowchart TD
+    classDef userAction fill:#fff3cd,stroke:#0046f0,stroke-width:2px,color:#0f172a;
+    classDef memoryAction fill:#ede9fe,stroke:#7c3aed,stroke-width:2.5px,color:#4c1d95;
+    classDef sysAction fill:#dcf5e1,stroke:#10b981,stroke-width:1.5px,color:#065f46;
+    classDef completeAction fill:#ecfdf5,stroke:#059669,stroke-width:2.5px,color:#064e3b;
+    classDef gameAction fill:#fdf4ff,stroke:#ec4899,stroke-width:2px,color:#831843;
+    classDef dbAction fill:#f0f9ff,stroke:#0284c7,stroke-width:1.5px,color:#0369a1;
+
+    subgraph Block1 ["👤 1. 사용자 접속 & 고유 식별자 발급"]
+        U_IN["[User] 접속 또는 새로고침(F5)"]:::userAction
+        U_ID["[System] 100% 고유 USER ID 생성 (예: USR-8X92-3419)"]:::sysAction
+        U_IN -->|세션 초기화| U_ID
+    end
+
+    subgraph Block2 ["⚡ 2. 1-Turn 발화 수집 & 프롬프트 조립 (HISTORY_TURNS = 1)"]
+        U_TEXT["[User] 1-Turn 메시지 입력 (예: '두부식당 갈래', '호텔 파크에서 14:30...')"]:::userAction
+        P_ASM["[Controller] 프롬프트 조립<br/>• [제약: HISTORY_TURNS = 1 (과거 대화 텍스트 없음)]<br/>• [주입: 현재 외부 영구 슬롯 메모리 JSON]<br/>• [입력: 방금 1턴 발화]"]:::sysAction
+        LLM_CALL["[Gemini 3.5 LLM] 문맥 해석 및 신규 슬롯/수정 항목 JSON 추출"]:::sysAction
+
+        U_TEXT -->|1턴 발화 전달| P_ASM
+        P_ASM -->|프롬프트 전송| LLM_CALL
+    end
+
+    subgraph Block3 ["🧠 3. 외부 영구 슬롯 메모리 엔진 (External Persistent Memory)"]
+        MEM_UPDATE["[Memory Merge] 새로 추출된 슬롯 반영 및 장소명 ➔ 도착지 자동 연계"]:::memoryAction
+        MEM_STORE[("[Persistent Memory State]<br/>• domain / placeName<br/>• destination (자동 이월)<br/>• departure / time / type")]:::memoryAction
+
+        LLM_CALL -->|슬롯 JSON 반환| MEM_UPDATE
+        MEM_UPDATE -->|상태 갱신| MEM_STORE
+        MEM_STORE -.->|다음 턴 대화 시 참조 주입| P_ASM
+    end
+
+    subgraph Block4 ["🖥️ 4. 3단 가로 분할 실시간 화면 동기화"]
+        UI_STEP["📍 좌측: 단계별 진행 현황 (1~5단계 실시간 완료 체크)"]:::sysAction
+        UI_CHAT["💬 중앙: AI 챗봇 대화창 (순차 질의 및 웰컴 응답)"]:::sysAction
+        UI_MEM["📋 우측: 실시간 예약 정보 현황 (슬롯 실시간 표출)"]:::sysAction
+
+        MEM_STORE -->|실시간 렌더링| UI_STEP
+        MEM_STORE -->|응답 렌더링| UI_CHAT
+        MEM_STORE -->|슬롯 렌더링| UI_MEM
+    end
+
+    subgraph Block5 ["✅ 5. 배차 확정 & Supabase 저장 & 대기 미니게임"]
+        VAL_CHECK{"4대 필수 슬롯<br/>완비 검증"}:::memoryAction
+        DISPATCH_DONE["[배차 확정]<br/>• 예약번호 발급 (TX-93806)<br/>• 기사 연락처 배정 (010-8376-2540)"]:::completeAction
+        DB_CLOUD[("☁️ Supabase DB<br/>places & taxi_reservations")]:::dbAction
+        GAME_BTN["🎮 [택시 기다리는 동안 게임하기!]<br/>adeven-small-one.vercel.app 연동"]:::gameAction
+
+        MEM_STORE --> VAL_CHECK
+        VAL_CHECK -->|4개 슬롯 완비| DISPATCH_DONE
+        DISPATCH_DONE -->|실시간 저장| DB_CLOUD
+        DISPATCH_DONE -->|게임 버튼 표출| GAME_BTN
+    end
+
+    subgraph ModifyLoop ["🔄 6. 실시간 수정 & 대화 초기화 루프"]
+        MOD_PLACE["[장소 수정] '장소 창덕궁으로 바꿀래' ➔ 장소 & 도착지 동시 갱신"]:::userAction
+        MOD_TAXI["[탑승정보 수정] '시간 15:00, 모범택시로' ➔ 해당 항목만 부분 갱신"]:::userAction
+        MOD_RESET["[대화 초기화] '처음부터 다시' ➔ 메모리 전체 리셋 & 신규 USER ID"]:::userAction
+    end
+
+    U_ID --> U_TEXT
+    UI_CHAT -.->|수정 요청| MOD_PLACE
+    UI_CHAT -.->|수정 요청| MOD_TAXI
+    UI_CHAT -.->|초기화 요청| MOD_RESET
+
+    MOD_PLACE ==>|장소/도착지 갱신| MEM_UPDATE
+    MOD_TAXI ==>|택시 슬롯 갱신| MEM_UPDATE
+    MOD_RESET ==>|세션 초기화| U_ID
+    </div>
+  </div>
+
+  <!-- 3. State Machine Diagram -->
+  <div class="diagram-card">
+    <div class="diagram-title">
+      <span>3. 1-Turn 메모리 봇 상태 머신 전이도 (State Transition Diagram)</span>
+      <span class="badge">State Tracker & Turns</span>
+    </div>
+    <div class="mermaid">
+stateDiagram-v2
+    [*] --> SESSION_INITIALIZED : 페이지 접속 (새로운 고유 USER ID 발급)
+
+    SESSION_INITIALIZED --> WAITING_INPUT : 초기 웰컴 안내 표출 (도착지 입력 유도)
+
+    state WAITING_INPUT {
+        [*] --> Capture_Turn1 : 사용자 1-Turn 발화 수집
+        Capture_Turn1 --> Inject_External_Memory : [누적 메모리 + 1턴 발화] 프롬프트 조립
+        Inject_External_Memory --> LLM_Inference : Gemini 3.5 슬롯 JSON 추출
+    }
+
+    WAITING_INPUT --> MERGE_SLOTS : 슬롯 파싱 성공
+
+    state MERGE_SLOTS {
+        [*] --> Update_Place : placeName ➔ destination 자동 이월
+        Update_Place --> Update_Taxi : departure, time, type 병합
+        Update_Taxi --> Sync_3Col_UI : 3단 화면 실시간 렌더링
+    }
+
+    MERGE_SLOTS --> WAITING_INPUT : 누락된 슬롯 질의 (순차 안내)
+    MERGE_SLOTS --> DISPATCH_CONFIRMED : [destination, departure, time, type] 완비
+
+    state DISPATCH_CONFIRMED {
+        [*] --> Issue_Booking_Code : TX-XXXXX & 기사 연락처 배정
+        Issue_Booking_Code --> Sync_Supabase_DB : places / taxi_reservations 저장
+        Sync_Supabase_DB --> Render_Game_Button : [🎮 택시 기다리는 동안 게임하기!] 표출
+    }
+
+    %% 수정 및 초기화 전이 루프
+    DISPATCH_CONFIRMED --> MERGE_SLOTS : "장소 변경" / "시간 변경" (부분 갱신)
+    WAITING_INPUT --> MERGE_SLOTS : "수정 요청"
+    DISPATCH_CONFIRMED --> SESSION_INITIALIZED : "처음부터 다시" / 대화 초기화
+    WAITING_INPUT --> SESSION_INITIALIZED : "초기화"
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Pretendard", "Segoe UI", Roboto, sans-serif',
+        fontSize: '14px',
+        primaryColor: '#eff6ff',
+        primaryTextColor: '#1e293b',
+        primaryBorderColor: '#3b82f6',
+        lineColor: '#64748b',
+        secondaryColor: '#f0fdf4',
+        tertiaryColor: '#faf5ff'
+      }
+    });
+  </script>
+</body>
+</html>
