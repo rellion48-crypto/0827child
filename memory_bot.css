@@ -118,30 +118,52 @@ body {
   transform: translateY(-1px);
 }
 
-/* Main Layout */
-.main-wrapper {
-  max-width: 1300px;
+/* ==========================================================================
+   MAIN 3-COLUMN UNIFIED SINGLE SCREEN LAYOUT
+   ========================================================================== */
+
+.main-wrapper-3col {
+  max-width: 1540px;
   width: 100%;
-  margin: 24px auto;
-  padding: 0 20px;
+  margin: 14px auto;
+  padding: 0 16px;
   display: grid;
-  grid-template-columns: 460px 1fr;
-  gap: 24px;
-  flex: 1;
+  grid-template-columns: 290px 1fr 300px;
+  gap: 16px;
+  height: calc(100vh - 80px);
+  min-height: 580px;
+  box-sizing: border-box;
 }
 
-/* Left Panel: Memory & Steps */
-.left-panel {
+.col-panel {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
+  height: 100%;
+  min-height: 0;
 }
 
+.col-left, .col-right {
+  overflow-y: auto;
+}
+
+.col-left::-webkit-scrollbar,
+.col-right::-webkit-scrollbar {
+  width: 4px;
+}
+
+.col-left::-webkit-scrollbar-thumb,
+.col-right::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+/* Service Info Card */
 .constraint-card {
   background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
   color: #ffffff;
-  border-radius: var(--radius-lg);
-  padding: 20px;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
   box-shadow: var(--shadow-card);
 }
 
@@ -149,7 +171,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .turn-pill {
@@ -157,27 +179,28 @@ body {
   color: #ffffff;
   font-size: 11px;
   font-weight: 800;
-  padding: 3px 8px;
+  padding: 2px 8px;
   border-radius: 9999px;
   letter-spacing: 0.5px;
 }
 
 .constraint-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
 }
 
 .constraint-desc {
-  font-size: 13px;
+  font-size: 12px;
   color: #c7d2fe;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
+/* Panel Card General */
 .panel-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 22px;
+  border-radius: var(--radius-md);
+  padding: 16px;
   box-shadow: var(--shadow-card);
 }
 
@@ -185,35 +208,35 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
-  padding-bottom: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--border-color);
 }
 
 .card-title-row h3 {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-main);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 /* Memory Slot Rows */
 .memory-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .mem-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 8px 12px;
   background: #f8fafc;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   transition: all 0.25s ease;
 }
 
@@ -228,13 +251,13 @@ body {
 }
 
 .mem-key {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
 }
 
 .mem-val {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-main);
 }
@@ -242,9 +265,9 @@ body {
 .mem-badge {
   font-size: 10px;
   font-weight: 800;
-  padding: 2px 6px;
+  padding: 1px 5px;
   border-radius: 4px;
-  margin-left: 6px;
+  margin-left: 4px;
 }
 
 .badge-carry {
@@ -261,15 +284,15 @@ body {
 .step-pipeline {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .step-item {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
   background: #f8fafc;
   border: 1px solid var(--border-color);
 }
@@ -285,16 +308,17 @@ body {
 }
 
 .step-num {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: #cbd5e1;
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
+  flex-shrink: 0;
 }
 
 .step-item.active .step-num {
@@ -310,31 +334,31 @@ body {
 }
 
 .step-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-main);
 }
 
 .step-desc {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
-/* Right Panel: Chatbot Window */
-.right-panel {
+/* Center Panel: Chatbot Window */
+.col-center.right-panel {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  height: calc(100vh - 120px);
-  min-height: 600px;
+  height: 100%;
+  min-height: 0;
 }
 
 .chat-header {
-  padding: 16px 20px;
+  padding: 12px 18px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -345,7 +369,7 @@ body {
 .chat-title-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .status-dot {
@@ -504,12 +528,13 @@ body {
   justify-content: space-between;
 }
 
-@media (max-width: 960px) {
-  .main-wrapper {
+@media (max-width: 1080px) {
+  .main-wrapper-3col {
     grid-template-columns: 1fr;
+    height: auto;
   }
-  .right-panel {
-    height: 550px;
+  .col-center.right-panel {
+    height: 560px;
   }
 }
 

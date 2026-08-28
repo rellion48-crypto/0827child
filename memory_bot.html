@@ -44,42 +44,30 @@
     </div>
   </header>
 
-  <!-- Main Body Layout -->
-  <main class="main-wrapper">
+  <!-- Main Body Layout: 3 Columns on 1 Screen -->
+  <main class="main-wrapper-3col">
 
-    <!-- LEFT PANEL: Service Benefit & Status & Pipeline -->
-    <aside class="left-panel">
-
-      <!-- Service Info Card -->
-      <div class="constraint-card">
-        <div class="constraint-header">
-          <span class="constraint-title">✨ 스마트 안심 배차 서비스</span>
-          <span class="turn-pill">실시간 연결중</span>
-        </div>
-        <p class="constraint-desc">
-          방문하실 장소와 원하시는 탑승 정보를 편하게 말씀해 주세요.<br>
-          대화 도중 언제든지 장소나 시간을 변경하셔도 실시간으로 완벽하게 연동됩니다.
-        </p>
-      </div>
+    <!-- COLUMN 1 (LEFT): 📍 단계별 예약 진행 현황 -->
+    <aside class="col-panel col-left">
 
       <!-- Step-by-Step Progress Pipeline -->
-      <div class="panel-card">
+      <div class="panel-card step-card">
         <div class="card-title-row">
-          <h3>📍 단계별 예약 진행 현황</h3>
+          <h3>📍 단계별 진행 현황</h3>
         </div>
         <div class="step-pipeline">
           <div class="step-item active" id="step-1">
             <div class="step-num">1</div>
             <div class="step-content">
-              <div class="step-title">목적지 / 방문 장소 확인</div>
-              <div class="step-desc">방문 장소명 입력 시 도착지로 자동 설정</div>
+              <div class="step-title">목적지 / 장소 확인</div>
+              <div class="step-desc">장소명 ➔ 도착지 자동 연계</div>
             </div>
           </div>
           <div class="step-item" id="step-2">
             <div class="step-num">2</div>
             <div class="step-content">
               <div class="step-title">출발지 위치 확인</div>
-              <div class="step-desc">택시를 탑승하실 출발 위치 입력</div>
+              <div class="step-desc">탑승할 출발 위치 입력</div>
             </div>
           </div>
           <div class="step-item" id="step-3">
@@ -93,60 +81,34 @@
             <div class="step-num">4</div>
             <div class="step-content">
               <div class="step-title">택시 차종 선택</div>
-              <div class="step-desc">일반 / 모범 / 고급 / 대형 밴 / 무관</div>
+              <div class="step-desc">일반/모범/고급/대형/무관</div>
             </div>
           </div>
           <div class="step-item" id="step-5">
             <div class="step-num">5</div>
             <div class="step-content">
               <div class="step-title">배차 예약 완료</div>
-              <div class="step-desc">실시간 예약 확정 및 기사님 자동 배정</div>
+              <div class="step-desc">실시간 확정 및 기사 배정</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Real-time Reservation Summary -->
-      <div class="panel-card">
-        <div class="card-title-row">
-          <h3>📋 실시간 예약 정보 현황</h3>
-          <span style="font-size: 11px; color: var(--accent-purple); font-weight: 700;">실시간 자동 반영</span>
+      <!-- Service Info Card -->
+      <div class="constraint-card compact-info">
+        <div class="constraint-header">
+          <span class="constraint-title">✨ 스마트 안심 배차</span>
+          <span class="turn-pill">실시간 연결</span>
         </div>
-        <div class="memory-list">
-          <div class="mem-row" id="mem-domain">
-            <span class="mem-key">방문 목적</span>
-            <span class="mem-val" id="val-domain">미입력 (-)</span>
-          </div>
-          <div class="mem-row" id="mem-name">
-            <span class="mem-key">방문 장소명</span>
-            <span class="mem-val" id="val-name">미입력 (-)</span>
-          </div>
-          <div class="mem-row" id="mem-dest">
-            <span class="mem-key">
-              택시 도착지
-              <span class="mem-badge badge-carry">장소 연계</span>
-            </span>
-            <span class="mem-val" id="val-dest">미입력 (-)</span>
-          </div>
-          <div class="mem-row" id="mem-dep">
-            <span class="mem-key">탑승 출발지</span>
-            <span class="mem-val" id="val-dep">미입력 (-)</span>
-          </div>
-          <div class="mem-row" id="mem-time">
-            <span class="mem-key">탑승 희망 시간</span>
-            <span class="mem-val" id="val-time">미입력 (-)</span>
-          </div>
-          <div class="mem-row" id="mem-type">
-            <span class="mem-key">택시 차종</span>
-            <span class="mem-val" id="val-type">미입력 (-)</span>
-          </div>
-        </div>
+        <p class="constraint-desc">
+          방문 장소와 탑승 정보를 편하게 말씀해 주세요. 대화 중 언제든 정보 변경이 가능합니다.
+        </p>
       </div>
 
     </aside>
 
-    <!-- RIGHT PANEL: Chatbot Dialogue Window -->
-    <section class="right-panel">
+    <!-- COLUMN 2 (CENTER): AI 배차 어시스턴트 (스마트 예약 상담) -->
+    <section class="col-panel col-center right-panel">
 
       <div class="chat-header">
         <div class="chat-title-group">
@@ -168,10 +130,10 @@
       <!-- Quick Test Chips -->
       <div class="quick-prompt-bar">
         <span style="font-size: 11px; color: var(--text-muted); font-weight: 700; white-space: nowrap;">빠른 입력:</span>
-        <button class="quick-chip" onclick="sendQuickChip('두부두부두부 식당 갈래')">🍽️ 두부두부두부 식당 갈래</button>
+        <button class="quick-chip" onclick="sendQuickChip('두부두부두부 식당 갈래')">🍽️ 두부두부두부 갈래</button>
         <button class="quick-chip" onclick="sendQuickChip('출발지는 호텔 파크야')">🏨 출발지는 호텔 파크야</button>
-        <button class="quick-chip" onclick="sendQuickChip('14시 30분에 일반 택시로 불러줘')">🚕 14시 30분에 일반 택시로 불러줘</button>
-        <button class="quick-chip" onclick="sendQuickChip('장소 창덕궁으로 바꿀래')">🔄 장소 창덕궁으로 바꿀래</button>
+        <button class="quick-chip" onclick="sendQuickChip('14시 30분에 일반 택시로 불러줘')">🚕 14:30 일반 택시</button>
+        <button class="quick-chip" onclick="sendQuickChip('장소 창덕궁으로 바꿀래')">🔄 장소 창덕궁으로 변경</button>
         <button class="quick-chip" onclick="sendQuickChip('처음부터 다시')">♻️ 처음부터 다시</button>
       </div>
 
@@ -188,6 +150,56 @@
       </div>
 
     </section>
+
+    <!-- COLUMN 3 (RIGHT): 📋 실시간 예약 정보 현황 -->
+    <aside class="col-panel col-right">
+
+      <div class="panel-card memory-card">
+        <div class="card-title-row">
+          <h3>📋 실시간 예약 정보 현황</h3>
+          <span style="font-size: 11px; color: var(--accent-purple); font-weight: 700;">실시간 반영</span>
+        </div>
+        <div class="memory-list">
+          <div class="mem-row" id="mem-domain">
+            <span class="mem-key">방문 목적</span>
+            <span class="mem-val" id="val-domain">미입력 (-)</span>
+          </div>
+          <div class="mem-row" id="mem-name">
+            <span class="mem-key">방문 장소명</span>
+            <span class="mem-val" id="val-name">미입력 (-)</span>
+          </div>
+          <div class="mem-row" id="mem-dest">
+            <span class="mem-key">
+              택시 도착지
+              <span class="mem-badge badge-carry">연계</span>
+            </span>
+            <span class="mem-val" id="val-dest">미입력 (-)</span>
+          </div>
+          <div class="mem-row" id="mem-dep">
+            <span class="mem-key">탑승 출발지</span>
+            <span class="mem-val" id="val-dep">미입력 (-)</span>
+          </div>
+          <div class="mem-row" id="mem-time">
+            <span class="mem-key">탑승 시간</span>
+            <span class="mem-val" id="val-time">미입력 (-)</span>
+          </div>
+          <div class="mem-row" id="mem-type">
+            <span class="mem-key">택시 차종</span>
+            <span class="mem-val" id="val-type">미입력 (-)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Game Preview Banner -->
+      <div class="game-banner-box" style="margin-top: 0;">
+        <a href="https://adeven-small-one.vercel.app/" target="_blank" rel="noopener noreferrer" class="btn-game-wait" style="width: 100%; font-size: 13px; padding: 10px 14px;">
+          <span>🎮</span>
+          <span>택시 기다리는 동안 게임하기!</span>
+        </a>
+        <p style="font-size: 11px; color: #64748b; margin-top: 6px;">배차 완료 후 미니게임을 즐겨보세요 🚗</p>
+      </div>
+
+    </aside>
 
   </main>
 
