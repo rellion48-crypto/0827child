@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1-Turn 메모리 챗봇 (HISTORY_TURNS = 1) - 택시 배차 시스템</title>
+  <meta name="description" content="HISTORY_TURNS=1 제약 조건에서도 별도 외부 슬롯 메모리를 참조하여 완벽한 배차를 수행하는 대화형 AI 어시스턴트">
+  <link rel="stylesheet" href="memory_bot.css">
+  <!-- Supabase JS Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="top-nav">
+    <div class="nav-container">
+      <div class="nav-left">
+        <div class="brand-badge">MEMORY BOT</div>
+        <div class="nav-title">
+          1-Turn 제약 대응 메모리 챗봇
+          <span>HISTORY_TURNS = 1 & PERSISTENT SLOT MEMORY</span>
+        </div>
+      </div>
+
+      <div class="nav-right">
+        <!-- Prominent User ID Display -->
+        <div class="user-id-badge" title="현재 접속한 사용자 고유 식별자">
+          <span>👤 USER ID:</span>
+          <span id="nav-user-id">USR-8492</span>
+        </div>
+
+        <!-- Back to Main Service Link -->
+        <a href="index.html" class="btn-nav-link" title="기본 일반/챗봇 메인 화면으로 이동">
+          <span>🏠</span>
+          <span>메인 서비스</span>
+        </a>
+
+        <!-- Mermaid Architecture Link -->
+        <a href="render_mermaid.html" class="btn-nav-link" title="Mermaid 구조도 화면으로 이동">
+          <span>📊</span>
+          <span>Mermaid 구조도</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Body Layout -->
+  <main class="main-wrapper">
+
+    <!-- LEFT PANEL: Constraint & External Memory & Pipeline -->
+    <aside class="left-panel">
+
+      <!-- Constraint Card -->
+      <div class="constraint-card">
+        <div class="constraint-header">
+          <span class="constraint-title">⚡ 제약 조건 환경</span>
+          <span class="turn-pill">HISTORY_TURNS = 1</span>
+        </div>
+        <p class="constraint-desc">
+          AI 모델에 전달되는 대화 히스토리는 <strong>직전 1턴만 유지</strong>됩니다.<br>
+          사용자가 발화할 때마다 추출된 정보는 <strong>별도 외부 메모리에 영구 저장</strong>되며, 봇이 답변할 때마다 이 메모리를 참조하여 정상 배차를 완료합니다.
+        </p>
+      </div>
+
+      <!-- Step-by-Step Progress Pipeline -->
+      <div class="panel-card">
+        <div class="card-title-row">
+          <h3>📍 단계별 배차 진행 현황</h3>
+        </div>
+        <div class="step-pipeline">
+          <div class="step-item active" id="step-1">
+            <div class="step-num">1</div>
+            <div class="step-content">
+              <div class="step-title">장소 접수 & 도착지 자동 이월</div>
+              <div class="step-desc">방문 장소명 입력 ➔ 택시 도착지로 자동 연계</div>
+            </div>
+          </div>
+          <div class="step-item" id="step-2">
+            <div class="step-num">2</div>
+            <div class="step-content">
+              <div class="step-title">출발 위치 확정</div>
+              <div class="step-desc">택시를 탑승할 출발지 입력</div>
+            </div>
+          </div>
+          <div class="step-item" id="step-3">
+            <div class="step-num">3</div>
+            <div class="step-content">
+              <div class="step-title">출발 시간 지정</div>
+              <div class="step-desc">희망 탑승 시간 또는 '지금 바로'</div>
+            </div>
+          </div>
+          <div class="step-item" id="step-4">
+            <div class="step-num">4</div>
+            <div class="step-content">
+              <div class="step-title">택시 종류 선택</div>
+              <div class="step-desc">일반 / 모범 / 고급 / 대형 / 무관</div>
+            </div>
+          </div>
+          <div class="step-item" id="step-5">
+            <div class="step-num">5</div>
+            <div class="step-content">
+              <div class="step-title">배차 확정 & Supabase 저장</div>
+              <div class="step-desc">예약번호 발급 및 클라우드 DB 실시간 연동</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-time External Slot Memory Inspector -->
+      <div class="panel-card">
+        <div class="card-title-row">
+          <h3>🧠 실시간 외부 슬롯 메모리</h3>
+          <span style="font-size: 11px; color: var(--accent-purple); font-weight: 700;">대화 턴 소실 방지</span>
+        </div>
+        <div class="memory-list">
+          <div class="mem-row" id="mem-domain">
+            <span class="mem-key">도메인 (domain)</span>
+            <span class="mem-val" id="val-domain">미입력 (-)</span>
+          </div>
+          <div class="mem-row" id="mem-name">
+            <span class="mem-key">장소명 (placeName)</span>
+            <span class="mem-val" id="val-name">미입력 (-)</span>
+          </div>
+          <div class="mem-row" id="mem-dest">
+            <span class="mem-key">
+              도착지 (destination)
+              <span class="mem-badge badge-carry">자동이월</span>
+            </span>
+            <span class="mem-val" id="val-dest">미입력 (-)</span>
+          </div>
+          <div class="mem-row" id="mem-dep">
+            <span class="mem-key">출발지 (departure)</span>
+            <span class="mem-val" id="val-dep">미입력 (-)</span>
+          </div>
+          <div class="mem-row" id="mem-time">
+            <span class="mem-key">출발 시간 (time)</span>
+            <span class="mem-val" id="val-time">미입력 (-)</span>
+          </div>
+          <div class="mem-row" id="mem-type">
+            <span class="mem-key">택시 종류 (type)</span>
+            <span class="mem-val" id="val-type">미입력 (-)</span>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- RIGHT PANEL: Chatbot Dialogue Window -->
+    <section class="right-panel">
+
+      <div class="chat-header">
+        <div class="chat-title-group">
+          <span class="status-dot"></span>
+          <span class="chat-title-text">AI 배차 어시스턴트 (1-Turn Memory Engine)</span>
+        </div>
+        <button class="btn-reset-chat" onclick="resetChatAndMemory()">대화 및 메모리 초기화</button>
+      </div>
+
+      <!-- Chat Log Stream -->
+      <div class="chat-log" id="chat-log">
+        <div class="msg-bubble bot">
+          안녕하세요! <strong>HISTORY_TURNS = 1</strong> 환경에서도 외부 영구 메모리를 통해 정상 배차를 지원합니다.<br>
+          먼저 방문하실 <strong>[장소 이름 또는 도착지]</strong>를 말씀해 주세요.
+          <span class="msg-meta">장소명 ➔ 택시 도착지 실시간 자동 이월</span>
+        </div>
+      </div>
+
+      <!-- Quick Test Chips -->
+      <div class="quick-prompt-bar">
+        <span style="font-size: 11px; color: var(--text-muted); font-weight: 700; white-space: nowrap;">빠른 테스트:</span>
+        <button class="quick-chip" onclick="sendQuickChip('두부두부두부 식당 갈래')">🍽️ 두부두부두부 식당 갈래</button>
+        <button class="quick-chip" onclick="sendQuickChip('출발지는 호텔 파크야')">🏨 출발지는 호텔 파크야</button>
+        <button class="quick-chip" onclick="sendQuickChip('14시 30분에 일반 택시로 불러줘')">🚕 14시 30분에 일반 택시로 불러줘</button>
+        <button class="quick-chip" onclick="sendQuickChip('장소 창덕궁으로 바꿀래')">🔄 장소 창덕궁으로 바꿀래</button>
+        <button class="quick-chip" onclick="sendQuickChip('처음부터 다시')">♻️ 처음부터 다시</button>
+      </div>
+
+      <!-- Chat Input Bar -->
+      <form class="chat-input-bar" onsubmit="event.preventDefault(); handleChatSubmit();">
+        <input type="text" id="chat-input-text" class="chat-input" placeholder="메시지를 입력하세요 (예: 룰루 한식뷔페 가려고, 서울역에서 3시에...)" autocomplete="off">
+        <button type="submit" class="btn-send">전송</button>
+      </form>
+
+      <!-- Supabase Live Status Bar -->
+      <div class="supabase-status-bar">
+        <span id="supabase-status-text">대기 중 (4대 슬롯 완비 시 실시간 Supabase DB 저장)</span>
+        <span style="color: #0457c8; font-weight: 700;">CLOUD SYNC</span>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="memory_bot.js"></script>
+</body>
+</html>

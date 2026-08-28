@@ -114,6 +114,45 @@ body {
   letter-spacing: 0.5px;
 }
 
+/* Center Navigation Group */
+.nav-center-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-memory-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.nav-memory-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+  background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+}
+
+.nav-memory-btn .memory-badge {
+  background: #ffffff;
+  color: #4f46e5;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
 /* Center Mermaid Navigation Button */
 .nav-mermaid-btn {
   display: inline-flex;
