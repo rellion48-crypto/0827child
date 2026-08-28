@@ -62,10 +62,25 @@
       color: #2563eb;
       border: 1px solid #bfdbfe;
     }
-    .mermaid {
-      display: flex;
-      justify-content: center;
-      width: 100%;
+    .btn-back-home {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #0457c8;
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 10px 22px;
+      border-radius: 9999px;
+      margin-top: 16px;
+      box-shadow: 0 4px 12px rgba(4, 87, 200, 0.25);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-back-home:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(4, 87, 200, 0.35);
+      background: #03449e;
     }
   </style>
 </head>
@@ -74,6 +89,10 @@
   <div class="header">
     <h1>택시 배차 및 장소 연계 플랫폼 전수조사 기반 Mermaid 상세 구조도</h1>
     <p>프로젝트 전수조사 기반: Actors (User, Callcenter AI, Gemini 3.5 LLM, Supabase DB) 간 데이터 흐름, 이월 메커니즘 및 실시간 수정/롤백 완벽 분석</p>
+    <a href="index.html" class="btn-back-home">
+      <span>🏠</span>
+      <span>메인 서비스 화면으로 돌아가기</span>
+    </a>
   </div>
 
   <!-- 1. Sequence Diagram (Actors) -->
