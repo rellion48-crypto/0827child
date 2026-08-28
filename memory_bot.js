@@ -229,7 +229,13 @@ ${JSON.stringify(state.sessionMemory, null, 2)}
               `- 운행 경로: ${mem.departure} ➔ <strong>${mem.destination}</strong><br>` +
               `- 탑승 시간: ${mem.time} (<strong>${mem.type}</strong>)<br>` +
               `- 배정 기사 연락처: <strong>${phone}</strong><br>` +
-              `<small style="color:#0457c8; font-weight:600;">✨ 기사님께 고객님의 탑승 정보가 정상 전달되었습니다.</small>`;
+              `<div class="game-banner-box" style="margin-top: 12px; text-align: center;">` +
+              `  <a href="https://adeven-small-one.vercel.app/" target="_blank" rel="noopener noreferrer" class="btn-game-wait" title="택시 기다리는 동안 미니 게임 플레이하기">` +
+              `    <span>🎮</span> <span>택시 기다리는 동안 게임하기!</span> <span>➔</span>` +
+              `  </a>` +
+              `  <p style="font-size: 11px; color: #64748b; margin-top: 6px;">택시가 도착할 때까지 신나는 미니게임을 즐겨보세요 🚗</p>` +
+              `</div>` +
+              `<small style="color:#0457c8; font-weight:600; margin-top: 8px; display: block;">✨ 기사님께 고객님의 탑승 정보가 정상 전달되었습니다.</small>`;
 
             addChatMessage("bot", completeReply);
             return;
@@ -293,7 +299,14 @@ function runLocalMemoryFallback(raw) {
     const bCode = "TX-" + Math.floor(10000 + Math.random() * 90000);
     const phone = "010-8376-" + Math.floor(1000 + Math.random() * 9000);
     saveReservationToSupabase(mem, bCode, phone);
-    addChatMessage("bot", `🎉 <strong>택시 배차 예약이 완료되었습니다!</strong> (예약번호: ${bCode})`);
+    const completeReply = `🎉 <strong>택시 배차 예약이 완료되었습니다!</strong> (예약번호: ${bCode})<br>` +
+      `<div class="game-banner-box" style="margin-top: 12px; text-align: center;">` +
+      `  <a href="https://adeven-small-one.vercel.app/" target="_blank" rel="noopener noreferrer" class="btn-game-wait" title="택시 기다리는 동안 미니 게임 플레이하기">` +
+      `    <span>🎮</span> <span>택시 기다리는 동안 게임하기!</span> <span>➔</span>` +
+      `  </a>` +
+      `  <p style="font-size: 11px; color: #64748b; margin-top: 6px;">택시가 도착할 때까지 신나는 미니게임을 즐겨보세요 🚗</p>` +
+      `</div>`;
+    addChatMessage("bot", completeReply);
   } else if (!mem.destination) {
     addChatMessage("bot", "어디로 가시나요? 방문하실 <strong>[장소 이름 또는 도착지]</strong>를 말씀해 주세요.");
   } else if (!mem.departure) {

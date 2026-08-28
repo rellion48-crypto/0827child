@@ -512,3 +512,45 @@ body {
     height: 550px;
   }
 }
+
+/* ==========================================================================
+   TAXI WAITING GAME BUTTON (https://adeven-small-one.vercel.app/)
+   ========================================================================== */
+
+.game-banner-box {
+  margin-top: 14px;
+  padding: 14px;
+  background: linear-gradient(135deg, #fdf4ff 0%, #f5f3ff 100%);
+  border: 1.5px dashed #c084fc;
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.btn-game-wait {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 50%, #3b82f6 100%);
+  background-size: 200% 200%;
+  animation: gameGlow 3s ease infinite alternate;
+  color: #ffffff !important;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 10px 22px;
+  border-radius: 9999px;
+  box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.btn-game-wait:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.55);
+}
+
+@keyframes gameGlow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
