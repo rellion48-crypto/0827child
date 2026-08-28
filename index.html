@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>장소 접수 ➔ 택시 배차 서비스</title>
-  <meta name="description" content="장소 접수부터 택시 배차까지 슬롯 이월 및 실시간 수정을 지원하는 간결한 택시 예약 시스템">
+  <title>스마트 장소 접수 & 택시 배차 서비스</title>
+  <meta name="description" content="방문 장소 접수부터 택시 배차까지 실시간 연계 및 빠른 수정을 지원하는 간편한 택시 예약 시스템">
   <link rel="stylesheet" href="index.css">
   <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -24,23 +24,23 @@
 
       <!-- Center Top: Navigation Group -->
       <div class="nav-center-group">
-        <a href="memory_bot.html" class="nav-memory-btn" title="HISTORY_TURNS = 1 제약 대응 메모리 챗봇 화면으로 이동">
-          <span class="memory-badge">TURN 1</span>
-          <span class="memory-text">1-Turn 메모리 챗봇 🧠</span>
+        <a href="memory_bot.html" class="nav-memory-btn" title="스마트 AI 실시간 대화형 배차 화면으로 이동">
+          <span class="memory-badge">SMART AI</span>
+          <span class="memory-text">스마트 AI 배차 🚕</span>
         </a>
-        <a href="render_mermaid.html" class="nav-mermaid-btn" title="Mermaid 상세 아키텍처 및 플로우 다이어그램 화면으로 이동">
-          <span class="mermaid-badge">MERMAID</span>
-          <span class="mermaid-text">구조도 보기 📊</span>
+        <a href="render_mermaid.html" class="nav-mermaid-btn" title="서비스 상세 아키텍처 및 구조도 화면으로 이동">
+          <span class="mermaid-badge">STRUCTURE</span>
+          <span class="mermaid-text">서비스 구조도 📊</span>
         </a>
       </div>
 
       <!-- Mode Switcher (일반 접수 vs AI 챗봇) -->
       <div class="mode-tabs">
         <button class="mode-tab active" id="tab-form-mode" onclick="setMode('form')">
-          📋 일반 접수 (기본)
+          📋 일반 접수
         </button>
         <button class="mode-tab" id="tab-chat-mode" onclick="setMode('chat')">
-          💬 챗봇 접수
+          💬 AI 챗봇 접수
         </button>
       </div>
     </div>
@@ -57,26 +57,26 @@
       <div class="stepper-wrap">
         <div class="step-node active" id="step-node-1" onclick="goToStep(1)">
           <div class="node-circle">1</div>
-          <div class="node-text">장소 접수 블록</div>
+          <div class="node-text">1. 방문 장소 접수</div>
         </div>
         <div class="step-line" id="line-1"></div>
         <div class="step-node" id="step-node-2" onclick="goToStep(2)">
           <div class="node-circle">2</div>
-          <div class="node-text">택시 배차 블록 (이월)</div>
+          <div class="node-text">2. 택시 탑승 정보</div>
         </div>
         <div class="step-line" id="line-2"></div>
         <div class="step-node" id="step-node-3">
           <div class="node-circle">3</div>
-          <div class="node-text">배차 확정</div>
+          <div class="node-text">3. 예약 완료</div>
         </div>
       </div>
 
       <!-- BLOCK 1: 장소 접수 -->
       <div class="form-card" id="form-block-1">
         <div class="card-header">
-          <div class="date-tag">BLOCK 1</div>
-          <h2 class="card-title">장소 접수</h2>
-          <p class="card-desc">방문하실 장소(식당/숙소/관광)의 슬롯 정보를 입력해 주세요.</p>
+          <div class="date-tag">STEP 1</div>
+          <h2 class="card-title">방문 장소 접수</h2>
+          <p class="card-desc">방문하실 장소(식당/숙소/관광)의 정보를 입력해 주세요.</p>
         </div>
 
         <form id="place-form" onsubmit="event.preventDefault(); submitPlaceBlock();">
@@ -109,45 +109,50 @@
               <input type="text" id="slot-place-name" class="input-control" placeholder="장소 이름을 입력하세요" required value="두부두부두부">
             </div>
 
+            <!-- Dynamic Place Metadata (From places table) -->
             <div class="form-group">
-              <label class="form-label" id="label-place-type">
-                종류
-                <span class="label-tag-auto">시스템 자동 지정</span>
-              </label>
-              <input type="text" id="slot-place-type" class="input-control auto-input" readonly value="한식당">
+              <label class="form-label">지역</label>
+              <input type="text" id="slot-place-region" class="input-control" readonly value="서울 동쪽" style="background: #f8fafc;">
             </div>
 
-            <div class="form-group" id="group-place-detail">
-              <label class="form-label" id="label-place-detail">
-                가격대
-                <span class="label-tag-auto">시스템 자동 지정</span>
-              </label>
-              <input type="text" id="slot-place-detail" class="input-control auto-input" readonly value="저렴">
+            <div class="form-group">
+              <label class="form-label">업종 / 유형</label>
+              <input type="text" id="slot-place-type" class="input-control" readonly value="한식당" style="background: #f8fafc;">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">가격대</label>
+              <input type="text" id="slot-place-price" class="input-control" readonly value="저렴한 편" style="background: #f8fafc;">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">특징 태그</label>
+              <input type="text" id="slot-place-tags" class="input-control" readonly value="건강식, 단체석" style="background: #f8fafc;">
             </div>
           </div>
 
           <div class="card-footer">
-            <div class="footer-hint">
-              💡 접수 후 장소 이름이 다음 택시 배차의 <strong>도착지</strong>로 자동 이월됩니다.
+            <div class="footer-tip">
+              💡 장소명을 입력하시면 택시 배차 시 <strong>도착지로 자동 연계</strong>됩니다.
             </div>
             <button type="submit" class="btn-primary">
-              택시 배차로 이어가기 ➔
+              장소 접수 완료 ➔ 택시 배차 이동
             </button>
           </div>
         </form>
       </div>
 
-      <!-- BLOCK 2: 택시 배차 (도착지 자동 이월 & 수정 가능) -->
+      <!-- BLOCK 2: 택시 배차 (Carry-over) -->
       <div class="form-card" id="form-block-2" style="display: none;">
         <div class="card-header">
-          <div class="date-tag">BLOCK 2</div>
-          <h2 class="card-title">택시 배차 접수</h2>
-          <p class="card-desc">장소 정보가 이월되었습니다. 출발지와 탑승 시간을 확인해 주세요.</p>
+          <div class="date-tag" style="background: #059669; color: #fff;">STEP 2</div>
+          <h2 class="card-title">택시 배차 요청</h2>
+          <p class="card-desc">방문 장소가 도착지로 자동 연계되었습니다. 출발지와 탑승 시간을 확인해 주세요.</p>
         </div>
 
         <!-- Carry-over notice banner -->
         <div class="carry-banner">
-          <div class="carry-badge">도착지 자동 이월됨</div>
+          <div class="carry-badge">도착지 자동 연동</div>
           <div class="carry-text">
             앞서 접수한 장소 <strong id="carry-place-text">두부두부두부</strong>(이)가 <strong>도착지</strong>로 자동 지정되었습니다.
           </div>
@@ -164,7 +169,7 @@
 
             <div class="form-group">
               <label class="form-label">
-                도착지 (이월됨 · 수정 가능) <span class="req">*</span>
+                도착지 (방문 장소 자동 연동) <span class="req">*</span>
                 <span class="label-tag-edit">수정 가능</span>
               </label>
               <input type="text" id="slot-taxi-destination" class="input-control highlight-input" placeholder="도착지를 입력하세요" required value="두부두부두부">
@@ -172,14 +177,14 @@
 
             <div class="form-group">
               <label class="form-label">
-                출발 시간 <span class="req">*</span>
+                탑승 시간 <span class="req">*</span>
               </label>
               <input type="time" id="slot-taxi-time" class="input-control" required value="14:30">
             </div>
 
             <div class="form-group">
               <label class="form-label">
-                택시 종류
+                택시 차종
               </label>
               <select id="slot-taxi-type" class="input-control">
                 <option value="일반" selected>일반 택시</option>
@@ -193,7 +198,7 @@
 
           <div class="card-footer">
             <button type="button" class="btn-secondary" onclick="goToStep(1)">
-              ◀ 장소 블록 수정
+              ◀ 방문 장소 수정
             </button>
             <button type="submit" class="btn-primary">
               택시 예약 확정하기 ➔
@@ -207,7 +212,7 @@
         <div class="card-header">
           <div class="date-tag" style="background: #2b4cb6; color: #fff;">완료</div>
           <h2 class="card-title">택시 배차 완료</h2>
-          <p class="card-desc">두 블록의 슬롯이 성공적으로 연계되어 배차가 완료되었습니다.</p>
+          <p class="card-desc">고객님의 요청에 맞춰 택시 배차가 안전하게 완료되었습니다.</p>
         </div>
 
         <div class="ticket-box">
@@ -223,7 +228,7 @@
             </div>
             <div class="route-arrow">➔</div>
             <div class="route-col" style="text-align: right;">
-              <span class="route-tag">도착지 (이월/수정 반영)</span>
+              <span class="route-tag">도착지 (방문 연계)</span>
               <strong id="res-dest" style="color: var(--color-primary);">두부두부두부</strong>
             </div>
           </div>
@@ -248,13 +253,13 @@
           </div>
 
           <div id="supabase-save-status" style="margin-top: 14px; font-size: 13px; color: #0457c8; font-weight: 600; text-align: center;">
-            ☁️ Supabase 실시간 DB 동기화 완료
+            ✅ 실시간 배차 예약 시스템에 안전하게 등록되었습니다.
           </div>
         </div>
 
         <div class="card-footer" style="justify-content: center; gap: 12px;">
           <button type="button" class="btn-secondary" onclick="goToStep(2)">
-            ✏️ 택시 슬롯 다시 수정
+            ✏️ 탑승 정보 수정
           </button>
           <button type="button" class="btn-primary" onclick="resetForm()">
             ✨ 처음부터 새 예약
@@ -270,34 +275,34 @@
     <div id="domain-chat-view" class="domain-view">
       <div class="chat-layout">
         
-        <!-- Chat Slot State Card -->
+        <!-- Chat State Card -->
         <div class="chat-slot-panel">
-          <h3 class="panel-title">실시간 슬롯 현황</h3>
-          <p class="panel-subtitle">대화 속에서 추출되어 이월/수정되는 슬롯 목록</p>
+          <h3 class="panel-title">📋 실시간 예약 정보 요약</h3>
+          <p class="panel-subtitle">대화를 통해 실시간으로 수집 및 갱신되는 예약 정보</p>
           
           <div class="slot-list">
             <div class="slot-row" id="c-slot-domain">
-              <span class="s-name">[장소] 도메인</span>
+              <span class="s-name">방문 목적</span>
               <span class="s-val" id="c-val-domain">-</span>
             </div>
             <div class="slot-row" id="c-slot-name">
-              <span class="s-name">[장소] 이름</span>
+              <span class="s-name">방문 장소명</span>
               <span class="s-val" id="c-val-name">-</span>
             </div>
             <div class="slot-row auto-carry" id="c-slot-dest">
-              <span class="s-name">[택시] 도착지 (이월)</span>
+              <span class="s-name">도착지 (장소 연계)</span>
               <span class="s-val" id="c-val-dest">-</span>
             </div>
             <div class="slot-row" id="c-slot-dep">
-              <span class="s-name">[택시] 출발지</span>
+              <span class="s-name">탑승 출발지</span>
               <span class="s-val" id="c-val-dep">-</span>
             </div>
             <div class="slot-row" id="c-slot-time">
-              <span class="s-name">[택시] 출발 시간</span>
+              <span class="s-name">탑승 시간</span>
               <span class="s-val" id="c-val-time">-</span>
             </div>
             <div class="slot-row" id="c-slot-type">
-              <span class="s-name">[택시] 종류</span>
+              <span class="s-name">택시 차종</span>
               <span class="s-val" id="c-val-type">-</span>
             </div>
           </div>
@@ -310,13 +315,13 @@
               <span class="status-dot"></span>
               택시 예약 AI 어시스턴트
             </div>
-            <button class="btn-clear" onclick="resetChat()">대화 초기화</button>
+            <button class="btn-clear" onclick="resetChat()">대화 새로 시작</button>
           </div>
 
           <div class="chat-log" id="chat-log">
             <div class="msg bot">
               안녕하세요! 택시 예약을 도와드릴게요. 먼저 방문하실 <strong>[장소 이름 또는 도착지]</strong>를 알려주세요.
-              <span class="msg-time">장소 접수 ➔ 택시 도착지로 자동 이월</span>
+              <span class="msg-time">방문 장소 입력 시 택시 목적지로 자동 연동됩니다.</span>
             </div>
           </div>
 

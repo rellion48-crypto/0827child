@@ -49,7 +49,7 @@ async function saveReservationToSupabase(mem, bookingCode, driverPhone) {
   if (!supabaseClient) return;
   try {
     const statusEl = document.getElementById("supabase-status-text");
-    if (statusEl) statusEl.textContent = "☁️ Supabase 실시간 DB 동기화 중...";
+    if (statusEl) statusEl.textContent = "실시간 배차 시스템에 예약 등록 중...";
 
     // 1. places upsert
     if (mem.placeName) {
@@ -78,7 +78,7 @@ async function saveReservationToSupabase(mem, bookingCode, driverPhone) {
       }]);
 
       if (!error) {
-        if (statusEl) statusEl.textContent = `☁️ Supabase 저장 완료 (예약번호: ${bookingCode}, 유저: ${CURRENT_USER_ID})`;
+        if (statusEl) statusEl.textContent = `✅ 배차 예약이 안전하게 접수되었습니다. (예약번호: ${bookingCode})`;
       } else {
         console.warn("Supabase insert warning:", error);
       }
@@ -224,12 +224,12 @@ ${JSON.stringify(state.sessionMemory, null, 2)}
             // Sync to Supabase DB
             saveReservationToSupabase(mem, bCode, phone);
 
-            const completeReply = `🎉 <strong>[HISTORY_TURNS=1 제약 극복] 배차가 완료되었습니다!</strong><br>` +
-              `- 예약번호: <strong>${bCode}</strong> (유저: ${CURRENT_USER_ID})<br>` +
-              `- 출발지: ${mem.departure} ➔ <strong>도착지(이월): ${mem.destination}</strong><br>` +
+            const completeReply = `🎉 <strong>택시 배차 예약이 성공적으로 완료되었습니다!</strong><br>` +
+              `- 예약번호: <strong>${bCode}</strong><br>` +
+              `- 운행 경로: ${mem.departure} ➔ <strong>${mem.destination}</strong><br>` +
               `- 탑승 시간: ${mem.time} (<strong>${mem.type}</strong>)<br>` +
               `- 배정 기사 연락처: <strong>${phone}</strong><br>` +
-              `<small style="color:#0457c8; font-weight:600;">☁️ Supabase DB 실시간 저장 완료</small>`;
+              `<small style="color:#0457c8; font-weight:600;">✨ 기사님께 고객님의 탑승 정보가 정상 전달되었습니다.</small>`;
 
             addChatMessage("bot", completeReply);
             return;
@@ -293,13 +293,13 @@ function runLocalMemoryFallback(raw) {
     const bCode = "TX-" + Math.floor(10000 + Math.random() * 90000);
     const phone = "010-8376-" + Math.floor(1000 + Math.random() * 9000);
     saveReservationToSupabase(mem, bCode, phone);
-    addChatMessage("bot", `🎉 <strong>[외부 메모리 참조] 배차가 완료되었습니다!</strong> (예약번호: ${bCode})`);
+    addChatMessage("bot", `🎉 <strong>택시 배차 예약이 완료되었습니다!</strong> (예약번호: ${bCode})`);
   } else if (!mem.destination) {
     addChatMessage("bot", "어디로 가시나요? 방문하실 <strong>[장소 이름 또는 도착지]</strong>를 말씀해 주세요.");
   } else if (!mem.departure) {
-    addChatMessage("bot", `장소(${mem.destination})가 메모리에 보존되었습니다. 어디서 탑승하시나요? <strong>[출발지]</strong>를 알려주세요.`);
+    addChatMessage("bot", `도착지(<strong>${mem.destination}</strong>)가 확인되었습니다. 어디서 탑승하시나요? <strong>[출발지]</strong>를 알려주세요.`);
   } else if (!mem.time) {
-    addChatMessage("bot", `출발지(${mem.departure})가 확인되었습니다. 몇 시에 탑승하시나요? <strong>[출발 시간]</strong>을 알려주세요.`);
+    addChatMessage("bot", `출발지(<strong>${mem.departure}</strong>)가 확인되었습니다. 몇 시에 탑승하시나요? <strong>[출발 시간]</strong>을 알려주세요.`);
   } else if (!mem.type) {
     addChatMessage("bot", `원하시는 <strong>택시 종류</strong>를 알려주세요. [일반 / 모범 / 고급 / 대형 / 무관]`);
   }
@@ -403,12 +403,12 @@ function resetChatAndMemory() {
 
   document.getElementById("chat-log").innerHTML = `
     <div class="msg-bubble bot">
-      안녕하세요! <strong>HISTORY_TURNS = 1</strong> 환경에서도 외부 영구 메모리를 통해 정상 배차를 지원합니다.<br>
-      먼저 방문하실 <strong>[장소 이름 또는 도착지]</strong>를 말씀해 주세요.
-      <span class="msg-meta">장소명 ➔ 택시 도착지 실시간 자동 이월</span>
+      안녕하세요! 빠르고 편리한 <strong>스마트 택시 배차 어시스턴트</strong>입니다.<br>
+      먼저 방문하실 <strong>[장소 이름 또는 도착지]</strong>를 편하게 말씀해 주세요.
+      <span class="msg-meta">방문 장소 입력 시 택시 목적지로 자동 연동됩니다.</span>
     </div>
   `;
 
   const statusEl = document.getElementById("supabase-status-text");
-  if (statusEl) statusEl.textContent = "대기 중 (4대 슬롯 완비 시 실시간 Supabase 저장)";
+  if (statusEl) statusEl.textContent = "🔒 안전한 실시간 예약 시스템과 연동되어 있습니다.";
 }
