@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>스마트 메모리 봇 (HISTORY_TURNS = 1) 핵심 아키텍처 한 장 요약</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 30px;
+      background: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Pretendard", "Segoe UI", Roboto, sans-serif;
+      color: #0f172a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .summary-card {
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 20px;
+      padding: 36px 44px;
+      box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+      width: 1300px;
+      box-sizing: border-box;
+    }
+    .title-banner {
+      text-align: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #f1f5f9;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 8px 0;
+      letter-spacing: -0.5px;
+    }
+    p {
+      font-size: 15px;
+      color: #475569;
+      margin: 0;
+    }
+    .badge-bar {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .badge {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+    .badge.purple {
+      background: #f5f3ff;
+      color: #6d28d9;
+      border-color: #ddd6fe;
+    }
+    .badge.green {
+      background: #f0fdf4;
+      color: #15803d;
+      border-color: #bbf7d0;
+    }
+    .btn-group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .btn-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #0457c8;
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 8px 18px;
+      border-radius: 9999px;
+      transition: all 0.2s ease;
+    }
+    .btn-nav:hover {
+      background: #03449e;
+      transform: translateY(-1px);
+    }
+    .btn-nav.game-btn {
+      background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+    }
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="summary-card">
+    <div class="title-banner">
+      <h1>🧠 스마트 메모리 봇 (HISTORY_TURNS = 1) 핵심 아키텍처 한 장 요약</h1>
+      <p>1-Turn 제약 속 외부 영구 슬롯 메모리 주입 · 액터 상호작용 · 상태 전이 · 실시간 DB 및 대기 게임 연동 통합 플로우</p>
+      <div class="badge-bar">
+        <span class="badge">Strict: HISTORY_TURNS = 1</span>
+        <span class="badge purple">External Persistent Slot Memory</span>
+        <span class="badge green">Live 3-Column UI & Supabase Sync</span>
+      </div>
+      <div class="btn-group">
+        <a href="memory_bot.html" class="btn-nav">
+          <span>💬</span>
+          <span>스마트 메모리 챗봇 화면</span>
+        </a>
+        <a href="render_memory_mermaid.html" class="btn-nav">
+          <span>📊</span>
+          <span>상세 3종 다이어그램 보기</span>
+        </a>
+        <a href="index.html" class="btn-nav">
+          <span>🏠</span>
+          <span>메인 서비스</span>
+        </a>
+        <a href="https://adeven-small-one.vercel.app/" target="_blank" class="btn-nav game-btn">
+          <span>🎮</span>
+          <span>대기 미니게임 바로가기</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="mermaid">
+flowchart TD
+    classDef actor fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a;
+    classDef turn fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#7c2d12;
+    classDef mem fill:#faf5ff,stroke:#9333ea,stroke-width:2.5px,color:#581c87;
+    classDef ui fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d;
+    classDef done fill:#ecfdf5,stroke:#059669,stroke-width:2.5px,color:#064e3b;
+    classDef game fill:#fdf4ff,stroke:#db2777,stroke-width:2px,color:#831843;
+    classDef db fill:#f0f9ff,stroke:#0284c7,stroke-width:2px,color:#0c4a6e;
+    classDef mod fill:#fefce8,stroke:#ca8a04,stroke-width:2px,color:#713f12;
+
+    %% 1. ACTOR & SESSION
+    USER["👤 1. 사용자 접속 & 고유 세션 발급 (Actor & Session Layer)<br/>• 접속 / 새로고침(F5) 시 100% 고유 USER ID 생성 (예: USR-8X92-3419)"]:::actor
+
+    %% 2. 1-TURN INTAKE
+    TURN["💬 2. 사용자 1-Turn 발화 수집 (Strict Turn Window)<br/>• 제약 조건: HISTORY_TURNS = 1 (과거 대화 텍스트 소실 상태)"]:::turn
+
+    %% 3. PROMPT & LLM
+    PROMPT["🧠 3. 프롬프트 조립 및 LLM 슬롯 파싱 (Prompt Assembly)<br/>• 주입: [외부 영구 슬롯 메모리 JSON] + [방금 1턴 발화]<br/>• Gemini 3.5 LLM ➔ 문맥 해석 및 신규/수정 슬롯 JSON 추출"]:::turn
+
+    %% 4. MEMORY & CARRY-OVER
+    MEM["💾 4. 외부 영구 슬롯 메모리 병합 & 장소 연계 (Persistent Slot Memory)<br/>• [CORE CARRY-OVER] 방문 장소명(placeName) ➔ 택시 도착지(destination) 자동 이월<br/>• 탑승 슬롯(출발지, 시간, 차종) 누적 보존 및 다음 턴 대화 시 지속 재참조"]:::mem
+
+    %% 5. 3-COLUMN UI
+    UI["🖥️ 5. 3단 가로 분할 실시간 대시보드 동기화 (Live 3-Column UI)<br/>• 📍 좌측: 단계별 진행 현황 (1~5단계 실시간 완료 체크)<br/>• 💬 중앙: AI 배차 어시스턴트 대화창 (순차 질의 및 안내)<br/>• 📋 우측: 실시간 예약 정보 현황 (슬롯 실시간 렌더링)"]:::ui
+
+    %% 6. VALIDATION GATE
+    GATE{"4대 필수 슬롯 완비 검증<br/>[도착지, 출발지, 탑승시간, 택시차종]"}:::mem
+
+    %% 7. DISPATCH & DB & GAME
+    DISPATCH["✅ 6. 배차 예약 확정 및 기사 배정 (Dispatch Complete)<br/>• 고유 예약번호 발급 (TX-93806)<br/>• 배정 기사 연락처 자동 배정 (010-8376-2540)"]:::done
+    DB[("☁️ Supabase Cloud DB 실시간 저장<br/>• places (장소 메타데이터)<br/>• taxi_reservations (배차 예약 정보)")]:::db
+    GAME["🎮 [택시 기다리는 동안 게임하기! 버튼 표출]<br/>• 배차 완료 티켓 & 대화창 내 외부 미니게임 링크 (adeven-small-one.vercel.app) 연동"]:::game
+
+    %% 8. MODIFICATION & RESET
+    MOD["🔄 7. 실시간 수정 & 대화 초기화 피드백 루프 (Lifecycle & Fallback)<br/>• [장소 수정] '장소 창덕궁으로 변경' ➔ 도착지 연쇄 갱신<br/>• [시간 수정] '시간 15:00, 모범택시로' ➔ 해당 항목만 부분 갱신<br/>• [대화 초기화] '처음부터 다시' ➔ 메모리 전체 리셋 & 신규 USER ID 발급"]:::mod
+
+    %% Pipeline Connections
+    USER -->|대화 세션 시작| TURN
+    TURN -->|1턴 발화 전달| PROMPT
+    PROMPT -->|슬롯 JSON 반환| MEM
+    MEM -->|실시간 상태 동기화| UI
+    UI --> GATE
+    GATE -->|4개 슬롯 완비| DISPATCH
+    GATE -.->|미완성 슬롯 존재 시 다음 항목 질문| TURN
+    DISPATCH -->|실시간 INSERT| DB
+    DISPATCH -->|미니게임 버튼 표출| GAME
+
+    UI -.->|수정 / 변경 / 리셋 발화| MOD
+    MOD ==>|수정 슬롯 갱신| MEM
+    MOD ==>|초기화 요청 시| USER
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Pretendard", "Segoe UI", Roboto, sans-serif',
+        fontSize: '14px',
+        primaryColor: '#eff6ff',
+        primaryTextColor: '#0f172a',
+        primaryBorderColor: '#3b82f6',
+        lineColor: '#64748b',
+        secondaryColor: '#f0fdf4',
+        tertiaryColor: '#faf5ff'
+      }
+    });
+  </script>
+</body>
+</html>
