@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>택시 배차 및 장소 연계 플랫폼 Mermaid 상세 구조도</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px;
+      background: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", Roboto, sans-serif;
+      color: #0f172a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+    }
+    .header {
+      text-align: center;
+      max-width: 1440px;
+    }
+    h1 {
+      font-size: 34px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 12px 0;
+      letter-spacing: -0.5px;
+    }
+    p {
+      font-size: 17px;
+      color: #475569;
+      margin: 0;
+      line-height: 1.6;
+    }
+    .diagram-card {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 16px;
+      padding: 36px 40px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+      width: 1440px;
+      box-sizing: border-box;
+    }
+    .diagram-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .badge {
+      font-size: 13px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: #eff6ff;
+      color: #2563eb;
+      border: 1px solid #bfdbfe;
+    }
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>택시 배차 및 장소 연계 플랫폼 전수조사 기반 Mermaid 상세 구조도</h1>
+    <p>프로젝트 전수조사 기반: Actors (User, Callcenter AI, Gemini 3.5 LLM, Supabase DB) 간 데이터 흐름, 이월 메커니즘 및 실시간 수정/롤백 완벽 분석</p>
+  </div>
+
+  <!-- 1. Sequence Diagram (Actors) -->
+  <div class="diagram-card">
+    <div class="diagram-title">
+      <span>1. Actor 기반 상세 시퀀스 다이어그램 (Sequence Diagram)</span>
+      <span class="badge">Actors: User · Callcenter · LLM · DB</span>
+    </div>
+    <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as 👤 User (사용자)
+    participant UI as 🖥️ Web UI (Form / Chat)
+    participant Agent as 🤖 Callcenter (대화 어시스턴트)
+    participant LLM as 🧠 Gemini 3.5 LLM (gemini-3.5-flash-lite)
+    participant Memory as 🔄 Slot Memory (상태머신 & Merge)
+    participant DB as ☁️ Supabase DB (places & taxi_reservations)
+
+    Note over User, DB: [PHASE 1: 장소 접수 블록 (Place Intake)]
+    User->>UI: 1. 방문 목적(식당/숙소/관광) 및 장소명(예: 두부두부두부) 입력
+    UI->>Agent: 발화 / 입력값 전달
+    Agent->>LLM: 자연어 슬롯 추출 요청 (domain, placeName)
+    LLM-->>Agent: JSON 슬롯 반환 (domain="식당", placeName="두부두부두부")
+    Agent->>Memory: 장소 슬롯 저장 (placeName="두부두부두부")
+    Agent->>DB: places 테이블 메타데이터 조회 (지역, 가격대, 태그)
+    DB-->>Agent: 장소 상세 정보 반환 (서울 동쪽, 한식당, 저렴)
+    Agent-->>UI: 장소 세부 정보 표출
+
+    Note over Agent, Memory: [★ CORE CARRY-OVER: 장소명 ➔ 택시 도착지 자동 이월]
+    Memory->>Memory: taxi.destination = place.name ("두부두부두부") 자동 동기화
+
+    Note over User, DB: [PHASE 2: 택시 배차 블록 (Taxi Dispatch)]
+    Agent-->>User: 탑승 정보 순차 질의 (출발지, 시간, 차종)
+    User->>UI: 2. 출발지 입력 ("호텔 파크")
+    UI->>Memory: departure="호텔 파크" 갱신
+    
+    alt 🔄 실시간 수정 시나리오 (Day 28 챌린지 대응)
+        User->>UI: 장소 변경 요청 ("창덕궁으로 바꿀래")
+        UI->>Memory: placeName="창덕궁" & destination="창덕궁" 연쇄 동시 갱신
+        User->>UI: 출발지/시간/차종 수정 요청 ("시간 15:00, 모범택시로")
+        UI->>Memory: time="15:00", type="모범 택시" 부분 갱신
+    end
+
+    User->>UI: 3. 시간 및 택시 종류 확정 ("14:30", "일반 택시")
+    UI->>Memory: time="14:30", type="일반 택시" 갱신
+
+    Note over User, DB: [PHASE 3: 배차 확정 & Supabase 실시간 저장 (Completion)]
+    Memory->>Agent: 4대 필수 슬롯 완비 검증 (destination, departure, time, type)
+    Agent->>Agent: 예약번호 발급 (TX-93806), 기사 배정 (010-8376-2540)
+    Agent->>DB: places & taxi_reservations 실시간 INSERT / UPSERT
+    DB-->>Agent: 201 Created / 저장 성공 응답
+    Agent-->>UI: 배차 완료 티켓 및 기사 정보 렌더링
+    UI-->>User: 최종 배차 확정 안내 표출
+    </div>
+  </div>
+
+  <!-- 2. System Architecture & Flowchart -->
+  <div class="diagram-card">
+    <div class="diagram-title">
+      <span>2. 서비스 파이프라인 및 수정 루프 플로우차트 (Flowchart TD)</span>
+      <span class="badge">Pipeline & Cascade Logic</span>
+    </div>
+    <div class="mermaid">
+flowchart TD
+    classDef userAction fill:#fff3cd,stroke:#0046f0,stroke-width:2px,color:#0f172a;
+    classDef sysAction fill:#dcf5e1,stroke:#10b981,stroke-width:1.5px,color:#065f46;
+    classDef carryAction fill:#ede9fe,stroke:#7c3aed,stroke-width:2.5px,color:#4c1d95;
+    classDef completeAction fill:#ecfdf5,stroke:#059669,stroke-width:2.5px,color:#064e3b;
+    classDef dbAction fill:#f0f9ff,stroke:#0284c7,stroke-width:1.5px,color:#0369a1;
+
+    subgraph Block1 ["🏛️ 1. 장소 접수 블록 (Place Intake Block)"]
+        P_DOM["[User] 도메인 선택 (식당 / 숙소 / 관광)"]:::userAction
+        P_NAME["[User] 장소명 입력 (예: 두부두부두부, 심미 호스텔)"]:::userAction
+        P_AI["[Callcenter AI] Gemini 3.5 슬롯 추출 & 도메인 판별"]:::sysAction
+        P_DB[("☁️ Supabase DB<br/>places 테이블")]:::dbAction
+        P_RES["[System] 장소 세부정보 표출 (지역: 서울 동쪽 / 가격: 저렴)"]:::sysAction
+
+        P_DOM -->|도메인 지정| P_NAME
+        P_NAME -->|장소명 발화 전달| P_AI
+        P_AI -->|메타데이터 조회| P_DB
+        P_DB -->|지역/가격대/태그| P_RES
+    end
+
+    subgraph CarryPipeline ["★ 핵심 데이터 이월 파이프라인 (Auto Carry-Over)"]
+        CARRY["장소명(place.name) ➔ 택시 도착지(taxi.destination)<br/>실시간 자동 이월 및 동기화"]:::carryAction
+    end
+
+    subgraph Block2 ["🚕 2. 택시 배차 블록 (Taxi Dispatch Block)"]
+        T_DEST["[System] 도착위치 자동 설정 (= 장소명 자동 이월)"]:::sysAction
+        T_DEP["[User] 출발위치 입력 (예: 호텔 파크, 서울역)"]:::userAction
+        T_TIME["[User] 탑승시간 입력 (예: 14:30 / 지금 바로)"]:::userAction
+        T_TYPE["[User] 택시종류 입력 (일반 / 모범 / 고급 / 대형 / 무관)"]:::userAction
+        T_VAL{"4대 필수 슬롯<br/>완비 검증"}:::carryAction
+
+        T_DEP --> T_DEST
+        T_DEST --> T_TIME
+        T_TIME --> T_TYPE
+        T_TYPE --> T_VAL
+    end
+
+    subgraph Block3 ["✅ 3. 배차 확정 & Supabase 실시간 저장 (Completion)"]
+        C_EXEC["[Callcenter AI] 배차 확정 처리<br/>• 예약코드 자동 생성 (TX-93806)<br/>• 배정 기사 연락처 (010-8376-2540)"]:::sysAction
+        C_DB[("☁️ Supabase DB<br/>taxi_reservations 테이블")]:::dbAction
+        C_TICKET["🎉 최종 배차 확정 정보 표출 (확정 티켓)<br/>• 연계 경로: 출발지(호텔 파크) ➔ 도착지[이월](두부두부두부)<br/>• 탑승 정보: 14:30 (일반 택시) / 배정 기사 연락처 & 상태"]:::completeAction
+
+        C_EXEC -->|실시간 INSERT/UPSERT| C_DB
+        C_DB -->|저장 완료| C_TICKET
+    end
+
+    subgraph ModifyEngine ["🔄 4. 실시간 수정 & 롤백 엔진 (Modification Engine)"]
+        M_PLACE["[장소 수정] '장소 창덕궁으로 바꿀래'<br/>➔ 장소명 재조회 & 택시 도착지 연쇄 갱신"]:::userAction
+        M_TAXI["[택시 수정] '시간 4시, 모범택시로 변경'<br/>➔ 해당 슬롯만 선택적 부분 갱신"]:::userAction
+        M_RESET["[전체 초기화] '처음부터 다시'<br/>➔ 전체 슬롯 리셋 & 초기 상태 복귀"]:::userAction
+    end
+
+    %% Main Inter-block Data flow
+    P_NAME ==>|장소명 이월 파이프| CARRY
+    CARRY ==>|도착지 슬롯 주입| T_DEST
+    T_VAL ==>|4대 슬롯 완비| C_EXEC
+
+    %% Modification triggers
+    C_TICKET -.->|장소 수정 발화| M_PLACE
+    C_TICKET -.->|택시 수정 발화| M_TAXI
+    C_TICKET -.->|초기화 발화| M_RESET
+
+    M_PLACE ==>|장소 & 도착지 동시 갱신| P_NAME
+    M_PLACE -.->|도착지 연쇄 갱신| T_DEST
+    M_TAXI -.->|택시 슬롯 부분 갱신| T_DEP
+    M_RESET ==>|초기 상태 리셋| P_DOM
+    </div>
+  </div>
+
+  <!-- 3. State Transition Diagram -->
+  <div class="diagram-card">
+    <div class="diagram-title">
+      <span>3. 슬롯 상태 머신 전이도 (State Transition Diagram)</span>
+      <span class="badge">State Tracker & Turns</span>
+    </div>
+    <div class="mermaid">
+stateDiagram-v2
+    [*] --> IDLE : 대화 시작 / 첫 웰컴 안내
+
+    IDLE --> PLACE_INTAKE : 장소 도메인/이름 입력
+    
+    state PLACE_INTAKE {
+        [*] --> Extract_Place : LLM 슬롯 파싱
+        Extract_Place --> Resolve_Metadata : places DB 조회
+        Resolve_Metadata --> Auto_Carry : destination = place.name
+    }
+
+    PLACE_INTAKE --> TAXI_COLLECTING : 도착지 자동 이월 완료
+
+    state TAXI_COLLECTING {
+        [*] --> Inquire_Departure : 출발지 누락 시 질문
+        Inquire_Departure --> Inquire_Time : 시간 누락 시 질문
+        Inquire_Time --> Inquire_Type : 차종 누락 시 질문
+    }
+
+    TAXI_COLLECTING --> DISPATCH_COMPLETED : [destination, departure, time, type] 완비
+
+    state DISPATCH_COMPLETED {
+        [*] --> Generate_Code : TX-XXXXX & 기사 배정
+        Generate_Code --> Sync_Supabase : 실시간 DB 저장
+        Sync_Supabase --> Render_Ticket : 확정 티켓 출력
+    }
+
+    %% 수정 및 롤백 전이 루프
+    TAXI_COLLECTING --> PLACE_INTAKE : 장소 수정 요청 ("장소 창덕궁으로 바꿀래")
+    DISPATCH_COMPLETED --> PLACE_INTAKE : 장소 변경 요청 (도착지 연쇄 갱신)
+    DISPATCH_COMPLETED --> TAXI_COLLECTING : 시간/차종/출발지 수정 ("시간 4시로 변경")
+    DISPATCH_COMPLETED --> IDLE : "처음부터 다시" (초기화)
+    TAXI_COLLECTING --> IDLE : "초기화"
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", Roboto, sans-serif',
+        fontSize: '14px',
+        primaryColor: '#eff6ff',
+        primaryTextColor: '#1e293b',
+        primaryBorderColor: '#3b82f6',
+        lineColor: '#64748b',
+        secondaryColor: '#f0fdf4',
+        tertiaryColor: '#faf5ff'
+      }
+    });
+  </script>
+</body>
+</html>
