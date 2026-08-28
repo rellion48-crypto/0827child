@@ -3,17 +3,14 @@
 // 외부 영구 슬롯 메모리(External Memory)를 참조하여 1턴 제약에서도 정상 배차
 // ==========================================================================
 
-// 1. User ID Generation & Persistence
-function getOrCreateUserId() {
-  let uid = localStorage.getItem("APP_USER_ID");
-  if (!uid) {
-    uid = "USR-" + Math.floor(1000 + Math.random() * 9000);
-    localStorage.setItem("APP_USER_ID", uid);
-  }
-  return uid;
+// 1. Dynamic Unique User ID Generation (새로고침/접속 시마다 매번 100% 고유하게 생성)
+function generateUniqueUserId() {
+  const randNum = Math.floor(1000 + Math.random() * 9000);
+  const timeCode = Date.now().toString(36).slice(-4).toUpperCase();
+  return `USR-${timeCode}-${randNum}`;
 }
 
-const CURRENT_USER_ID = getOrCreateUserId();
+let CURRENT_USER_ID = generateUniqueUserId();
 
 // 2. State & External Slot Memory
 const state = {
@@ -388,6 +385,11 @@ function updateStepPipeline() {
 }
 
 function resetChatAndMemory() {
+  CURRENT_USER_ID = generateUniqueUserId();
+  state.userId = CURRENT_USER_ID;
+  const navUserIdEl = document.getElementById("nav-user-id");
+  if (navUserIdEl) navUserIdEl.textContent = CURRENT_USER_ID;
+
   state.sessionMemory = {
     domain: "",
     placeName: "",
